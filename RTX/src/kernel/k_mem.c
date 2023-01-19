@@ -45,9 +45,30 @@
 
 #include "k_mem.h"
 #include "Serial.h"
+#define DEBUG_0
 #ifdef DEBUG_0
 #include "printf.h"
 #endif  /* DEBUG_0 */
+/*
+ *==========================================================================
+ *                           STRUCTS & TYPEDEFS
+ *==========================================================================
+ */
+// probably combine these structs later
+// header struct for allocated mem
+typedef struct {
+    unsigned int size;
+    unsigned int pad1;
+    unsigned int pad2;
+    unsigned int pad3;
+} header_t;
+
+// node struct for free mem
+typedef struct node_t node_t;
+struct node_t {
+    unsigned int size;
+    node_t *next;
+};
 
 /*
  *==========================================================================
@@ -69,25 +90,6 @@ U32 g_p_stacks[MAX_TASKS][U_STACK_SIZE >> 2] __attribute__((aligned(8)));
 node_t *head;
 unsigned int list_size;
 
-/*
- *==========================================================================
- *                           STRUCTS & TYPEDEFS 
- *==========================================================================
- */
-// probably combine these structs later
-// header struct for allocated mem
-typedef struct {
-    unsigned int size;
-    unsigned int pad1;
-    unsigned int pad2;
-    unsigned int pad3;
-} header_t;
-
-// node struct for free mem
-typedef struct {
-    unsigned int size;
-    node_t *next;
-} node_t;
 
 /*
  *===========================================================================
@@ -113,7 +115,7 @@ int k_mem_init(void) {
         return RTX_ERR;
     }
     // create linked list 
-    head = end_addr;
+    head = (node_t *)end_addr;
     head->size = RAM_END-end_addr;
     head->next = NULL;
     list_size = 1;
@@ -126,9 +128,13 @@ int k_mem_init(void) {
 }
 
 void* k_mem_alloc(size_t size) {
+#ifdef DEBUG_0
+    printf("k_mem_alloc: requested memory size = %d\r\n", size);
+#endif /* DEBUG_0 */
+
     // round size up to nearest multiple of 4
     if(size & 0x3){
-        size = size & ~0x3 + 4;
+        size = (size & ~0x3) + 4;
     }
     unsigned int find_size = size + sizeof(header_t);
     node_t *curr_node = head; 
@@ -137,6 +143,7 @@ void* k_mem_alloc(size_t size) {
         if (curr_node->size >= find_size) {
             unsigned int size_left = curr_node->size - find_size;
             if (size_left == 0){
+            	printf("debug 0\n");
                 // remove node
                 if (i == 0) {
                     head = curr_node->next;
@@ -148,29 +155,30 @@ void* k_mem_alloc(size_t size) {
             }
             else {
                 // update node
+            	printf("debug 1\n");
                 if (i == 0) {
-                    head = (unsigned int)curr_node + find_size;
+                	printf("debug 2\n");
+                	printf("updating free list\n");
+                    head = (node_t *)((unsigned int)curr_node + find_size);
                     head->size = curr_node->size - find_size;
                     head->next = curr_node->next;
+                    printf("head: %u, curr_node: %u, size: %u, find_size: %u\n", head, curr_node, size, find_size);
                 }
                 else {
-                    prev_node->next = (unsigned int)curr_node + find_size;
+                	printf("debug 3\n");
+                    prev_node->next = (node_t *)((unsigned int)curr_node + find_size);
                     prev_node->next->size = curr_node->size - find_size;
                     prev_node->next->next = curr_node->next;
                 }
             }
             ((header_t *)curr_node)->size = size;
-            return (unsigned int)curr_node + sizeof(header_t);
+            return (void *)((unsigned int)curr_node + sizeof(header_t));
         }
         prev_node = curr_node;
         curr_node = curr_node->next;
     }
-    // no big enough free node found
-    return NULL;
 
-#ifdef DEBUG_0
-    printf("k_mem_alloc: requested memory size = %d\r\n", size);
-#endif /* DEBUG_0 */
+    // no big enough free node found
     return NULL;
 }
 
@@ -179,7 +187,7 @@ int k_mem_dealloc(void *ptr) {
         return RTX_OK;
     }
 
-    node_t *node_ptr = (header_t *)ptr - 1;
+    node_t *node_ptr = (node_t *)((header_t *)ptr - 1);
     node_ptr->size = ((header_t *)node_ptr)->size + sizeof(header_t);
 
     node_t *curr_node = head;
@@ -190,7 +198,7 @@ int k_mem_dealloc(void *ptr) {
             ++list_size;
             node_ptr->next = curr_node;
             // coalesce with next node
-            if (curr_node != NULL && (unsigned int)node_ptr + node_ptr->size == curr_node){
+            if (curr_node != NULL && (unsigned int)node_ptr + node_ptr->size == (unsigned int)curr_node){
                 node_ptr->size += curr_node->size;
                 node_ptr->next = curr_node->next;
                 --list_size;
@@ -202,7 +210,7 @@ int k_mem_dealloc(void *ptr) {
             else {
                 prev_node->next = node_ptr;
                 // coalesce with previous node
-                if ((unsigned int)prev_node + prev_node->size == node_ptr){
+                if ((unsigned int)prev_node + prev_node->size == (unsigned int)node_ptr){
                     prev_node->size += node_ptr->size;
                     prev_node->next = node_ptr->next;
                     --list_size;
@@ -234,7 +242,6 @@ int k_mem_count_extfrag(size_t size) {
 #ifdef DEBUG_0
     printf("k_mem_extfrag: size = %d\r\n", size);
 #endif /* DEBUG_0 */
-    return RTX_OK;
 }
 
 /*

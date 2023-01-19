@@ -162,12 +162,13 @@ int heap_leakage_test() {
 
 		// pointer to allocated memory should not be null
 		// starting address of allocated memory should be four-byte aligned
-		if (p_old[i] == NULL || ((unsigned int) p_old[0] & 3))
+		if (p_old[i] == NULL || ((unsigned int) p_old[0] & 3)){
 			return CODE_MEM_ALLOC;
-
+		}
 		if (i > 0) {
 			// adjacent allocated memory should not conflict
 			if (p_old[i - 1] + 256 * i >= p_old[i])
+				printf("%u\t%u\t%u\n", i, p_old[i - 1], p_old[i]);
 				return CODE_MEM_ALLOC;
 		}
 	}
@@ -230,6 +231,7 @@ int test_mem(void) {
 		printf("No heap leakage.\r\n");
 		break;
 	default:
+		break;
 	}
 
 	return result == CODE_SUCCESS;
