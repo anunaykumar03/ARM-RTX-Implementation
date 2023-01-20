@@ -49,18 +49,21 @@
 #ifdef DEBUG_0
 #include "printf.h"
 #endif  /* DEBUG_0 */
+
+#define SET_BIT(var, bit) (var |= (1 << bit))
+#define CLEAR_BIT(var, bit) (var &= ~(1 << bit))
+
+#define FREE_SET_FL_POSITION (31)
+#define FREE_IS_FL_SET(a) (a >> FREE_SET_FL_POSITION)
+#define FREE_SET_FL(a) (SET_BIT(a, FREE_SET_FL_POSITION))
+#define FREE_CLEAR_FL(a) (CLEAR_BIT(a, FREE_SET_FL_POSITION))
+#define NO_FL_SIZE(a) (a & ~(1 << FREE_SET_FL_POSITION))
+
 /*
  *==========================================================================
  *                           STRUCTS & TYPEDEFS
  *==========================================================================
  */
-// probably combine these structs later
-// header struct for allocated mem
-typedef struct {
-    unsigned int size;
-} header_t;
-
-// node struct for free mem
 typedef struct node_t node_t;
 struct node_t {
     unsigned int size;
@@ -114,6 +117,7 @@ int k_mem_init(void) {
     // create linked list 
     head = (node_t *)end_addr;
     head->size = RAM_END-end_addr;
+    FREE_SET_FL(head->size);
     head->next = NULL;
     list_size = 1;
 
@@ -133,37 +137,23 @@ void* k_mem_alloc(size_t size) {
     if(size & 0x3){
         size = (size & ~0x3) + 4;
     }
-    unsigned int find_size = size + sizeof(header_t);
-    node_t *curr_node = head; 
+    unsigned int find_size = size + sizeof(node_t);
+    node_t *curr_node = head;
     node_t *prev_node = NULL;
     for (int i = 0; i < list_size; ++i) {
-        if (curr_node->size >= find_size) {
+        if (FREE_IS_FL_SET(curr_node->size) && NO_FL_SIZE(curr_node->size) >= find_size) {
+            FREE_CLEAR_FL(curr_node->size);
             unsigned int size_left = curr_node->size - find_size;
-            if (size_left == 0){
-                // remove node
-                if (i == 0) {
-                    head = curr_node->next;
-                }
-                else {
-                    prev_node->next = curr_node->next;
-                }
-                --list_size;
+            if (size_left != 0) {
+            	// split node
+            	node_t *temp = (node_t *)((unsigned int)curr_node + find_size);
+            	temp->size = size_left;
+                FREE_SET_FL(temp->size);
+                temp->next = curr_node->next;
+                curr_node->next = temp;
+                curr_node->size = find_size; // note that for both free and alloced nodes, the size is total size including sizeof(node_t)
             }
-            else {
-                // update node
-                if (i == 0) {
-                    head = (node_t *)((unsigned int)curr_node + find_size);
-                    head->size = curr_node->size - find_size;
-                    head->next = curr_node->next;
-                }
-                else {
-                    prev_node->next = (node_t *)((unsigned int)curr_node + find_size);
-                    prev_node->next->size = curr_node->size - find_size;
-                    prev_node->next->next = curr_node->next;
-                }
-            }
-            ((header_t *)curr_node)->size = size;
-            return (void *)((unsigned int)curr_node + sizeof(header_t));
+            return (void *)((unsigned int)curr_node + sizeof(node_t));
         }
         prev_node = curr_node;
         curr_node = curr_node->next;
