@@ -45,7 +45,7 @@
 
 #include "k_mem.h"
 #include "Serial.h"
-#define DEBUG_0
+//#define DEBUG_0
 #ifdef DEBUG_0
 #include "printf.h"
 #endif  /* DEBUG_0 */
@@ -58,9 +58,6 @@
 // header struct for allocated mem
 typedef struct {
     unsigned int size;
-    unsigned int pad1;
-    unsigned int pad2;
-    unsigned int pad3;
 } header_t;
 
 // node struct for free mem
@@ -143,7 +140,6 @@ void* k_mem_alloc(size_t size) {
         if (curr_node->size >= find_size) {
             unsigned int size_left = curr_node->size - find_size;
             if (size_left == 0){
-            	printf("debug 0\n");
                 // remove node
                 if (i == 0) {
                     head = curr_node->next;
@@ -155,17 +151,12 @@ void* k_mem_alloc(size_t size) {
             }
             else {
                 // update node
-            	printf("debug 1\n");
                 if (i == 0) {
-                	printf("debug 2\n");
-                	printf("updating free list\n");
                     head = (node_t *)((unsigned int)curr_node + find_size);
                     head->size = curr_node->size - find_size;
                     head->next = curr_node->next;
-                    printf("head: %u, curr_node: %u, size: %u, find_size: %u\n", head, curr_node, size, find_size);
                 }
                 else {
-                	printf("debug 3\n");
                     prev_node->next = (node_t *)((unsigned int)curr_node + find_size);
                     prev_node->next->size = curr_node->size - find_size;
                     prev_node->next->next = curr_node->next;

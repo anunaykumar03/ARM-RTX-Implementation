@@ -167,9 +167,9 @@ int heap_leakage_test() {
 		}
 		if (i > 0) {
 			// adjacent allocated memory should not conflict
-			if (p_old[i - 1] + 256 * i >= p_old[i])
-				printf("%u\t%u\t%u\n", i, p_old[i - 1], p_old[i]);
+			if (p_old[i - 1] + 256 * i >= p_old[i]){
 				return CODE_MEM_ALLOC;
+			}
 		}
 	}
 
@@ -179,6 +179,7 @@ int heap_leakage_test() {
 			return CODE_MEM_DEALLOC;
 		}
 	}
+
 
 	// Step 3: Memory Leakage
 	for (int i = 0; i < N; i++) {
