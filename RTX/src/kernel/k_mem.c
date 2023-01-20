@@ -50,14 +50,14 @@
 #include "printf.h"
 #endif  /* DEBUG_0 */
 
-#define SET_BIT(var, bit) (var |= (1 << bit))
-#define CLEAR_BIT(var, bit) (var &= ~(1 << bit))
+#define SET_BIT(var, bit) (var |= (1U << bit))
+#define CLEAR_BIT(var, bit) (var &= ~(1U << bit))
 
 #define FREE_SET_FL_POSITION (31)
 #define FREE_IS_FL_SET(a) (a >> FREE_SET_FL_POSITION)
 #define FREE_SET_FL(a) (SET_BIT(a, FREE_SET_FL_POSITION))
 #define FREE_CLEAR_FL(a) (CLEAR_BIT(a, FREE_SET_FL_POSITION))
-#define NO_FL_SIZE(a) (a & ~(1 << FREE_SET_FL_POSITION))
+#define NO_FL_SIZE(a) (a & ~(1U << FREE_SET_FL_POSITION))
 
 /*
  *==========================================================================
@@ -136,8 +136,7 @@ void* k_mem_alloc(size_t size) {
     }
     unsigned int find_size = size + sizeof(node_t);
     node_t *curr_node = head;
-    node_t *prev_node = NULL;
-    for (int i = 0; i < list_size; ++i) {
+    while (curr_node != NULL) {
         if (FREE_IS_FL_SET(curr_node->size) && NO_FL_SIZE(curr_node->size) >= find_size) {
             FREE_CLEAR_FL(curr_node->size);
             unsigned int size_left = curr_node->size - find_size;
@@ -152,7 +151,6 @@ void* k_mem_alloc(size_t size) {
             }
             return (void *)((unsigned int)curr_node + sizeof(node_t));
         }
-        prev_node = curr_node;
         curr_node = curr_node->next;
     }
 
