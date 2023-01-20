@@ -88,8 +88,6 @@ U32 g_p_stacks[MAX_TASKS][U_STACK_SIZE >> 2] __attribute__((aligned(8)));
 
 // pointer to start of list
 node_t *head;
-unsigned int list_size;
-
 
 /*
  *===========================================================================
@@ -119,7 +117,6 @@ int k_mem_init(void) {
     head->size = RAM_END-end_addr;
     FREE_SET_FL(head->size);
     head->next = NULL;
-    list_size = 1;
 
 #ifdef DEBUG_0
     printf("k_mem_init: image ends at 0x%x\r\n", end_addr);
@@ -168,35 +165,23 @@ int k_mem_dealloc(void *ptr) {
         return RTX_OK;
     }
 
-    node_t *node_ptr = (node_t *)((header_t *)ptr - 1);
-    node_ptr->size = ((header_t *)node_ptr)->size + sizeof(header_t);
-
+    node_t *node_ptr = ((node_t *)ptr - 1);
     node_t *curr_node = head;
     node_t *prev_node = NULL;
-    // insert new free node into list
-    for (int i = 0; i <= list_size; ++i){
-        if (node_ptr < curr_node || i == list_size){
-            ++list_size;
-            node_ptr->next = curr_node;
+    while (curr_node != NULL){
+        if (node_ptr == curr_node){
             // coalesce with next node
-            if (curr_node != NULL && (unsigned int)node_ptr + node_ptr->size == (unsigned int)curr_node){
-                node_ptr->size += curr_node->size;
-                node_ptr->next = curr_node->next;
-                --list_size;
+            if (curr_node->next != NULL && FREE_IS_FL_SET(curr_node->next->size)){
+                curr_node->size += NO_FL_SIZE(curr_node->next->size);
+                curr_node->next = curr_node->next->next;
             }
-            if (i == 0){
-                // move head if inserted before first node
-                head = node_ptr;
+            // coalesce with prev node
+            if (prev_node != NULL && FREE_IS_FL_SET(prev_node->size)){
+                prev_node->size += curr_node->size;
+                prev_node->next = curr_node->next;
             }
-            else {
-                prev_node->next = node_ptr;
-                // coalesce with previous node
-                if ((unsigned int)prev_node + prev_node->size == (unsigned int)node_ptr){
-                    prev_node->size += node_ptr->size;
-                    prev_node->next = node_ptr->next;
-                    --list_size;
-                }
-            }
+            // set free flag, this wont do anything if coalesced with prev node
+            FREE_SET_FL(curr_node->size);
             return RTX_OK;
         }
         prev_node = curr_node;
@@ -210,10 +195,11 @@ int k_mem_dealloc(void *ptr) {
 }
 
 int k_mem_count_extfrag(size_t size) {
+    FREE_SET_FL(size); // for easy comparison 
     node_t *curr_node = head;
     unsigned int count = 0;
-    for (int i = 0; i < list_size; ++i){
-        if (curr_node->size < size){
+    while (curr_node != NULL) {
+        if (FREE_IS_FL_SET(curr_node->size) && curr_node->size <= size){
             ++count;
         }
         curr_node = curr_node->next;
