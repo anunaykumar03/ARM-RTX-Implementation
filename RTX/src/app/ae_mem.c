@@ -44,8 +44,94 @@
 #if TEST == -1
 
 int test_mem(void) {
+	printf("Start test\r\n");
 	unsigned int start = timer_get_current_val(2);
-	printf("NOTHING TO TEST.\r\n");
+
+	void * p1 = k_mem_alloc(1);
+	k_mem_dealloc(p1);
+	void * p2 = k_mem_alloc(2);
+	void * p3 = k_mem_alloc(3);
+	void * p4 = k_mem_alloc(4);
+	void * p5 = k_mem_alloc(5);
+	k_mem_dealloc(p4);
+	void * p6 = k_mem_alloc(6);
+	k_mem_dealloc(p3);
+	void * p7 = k_mem_alloc(7);
+	k_mem_dealloc(p5);
+	k_mem_dealloc(p7);
+	void * p8 = k_mem_alloc(8);
+	void * p9 = k_mem_alloc(9);
+	void * p10 = k_mem_alloc(10);
+	void * p11 = k_mem_alloc(11);
+	k_mem_dealloc(p2);
+	k_mem_dealloc(p8);
+	k_mem_dealloc(p11);
+	void * p12 = k_mem_alloc(12);
+	void * p13 = k_mem_alloc(13);
+	void * p14 = k_mem_alloc(14);
+	void * p15 = k_mem_alloc(15);
+	void * p16 = k_mem_alloc(16);
+	void * p17 = k_mem_alloc(17);
+	void * p18 = k_mem_alloc(18);
+	k_mem_dealloc(p14);
+	k_mem_dealloc(p18);
+	k_mem_dealloc(p17);
+	void * p19 = k_mem_alloc(19);
+	k_mem_dealloc(p19);
+	k_mem_dealloc(p15);
+	k_mem_dealloc(p6);
+	k_mem_dealloc(p9);
+	k_mem_dealloc(p12);
+	k_mem_dealloc(p10);
+	void * p20 = k_mem_alloc(20);
+	void * p21 = k_mem_alloc(21);
+	void * p22 = k_mem_alloc(22);
+	void * p23 = k_mem_alloc(23);
+	void * p24 = k_mem_alloc(24);
+	void * p25 = k_mem_alloc(25);
+	k_mem_dealloc(p13);
+	void * p26 = k_mem_alloc(26);
+	void * p27 = k_mem_alloc(27);
+	k_mem_dealloc(p26);
+	void * p28 = k_mem_alloc(28);
+	k_mem_dealloc(p27);
+	k_mem_dealloc(p28);
+	k_mem_dealloc(p25);
+	void * p29 = k_mem_alloc(29);
+	void * p30 = k_mem_alloc(30);
+	void * p31 = k_mem_alloc(31);
+	k_mem_dealloc(p21);
+	k_mem_dealloc(p20);
+	k_mem_dealloc(p22);
+	void * p32 = k_mem_alloc(32);
+	void * p33 = k_mem_alloc(33);
+	void * p34 = k_mem_alloc(34);
+	void * p35 = k_mem_alloc(35);
+	void * p36 = k_mem_alloc(36);
+	void * p37 = k_mem_alloc(37);
+	k_mem_dealloc(p29);
+	k_mem_dealloc(p16);
+	k_mem_dealloc(p31);
+	k_mem_dealloc(p33);
+	k_mem_dealloc(p35);
+	void * p38 = k_mem_alloc(38);
+	void * p39 = k_mem_alloc(39);
+	k_mem_dealloc(p37);
+	k_mem_dealloc(p23);
+	void * p40 = k_mem_alloc(40);
+	k_mem_dealloc(p30);
+	k_mem_dealloc(p24);
+	void * p41 = k_mem_alloc(41);
+	k_mem_dealloc(p41);
+	k_mem_dealloc(p40);
+	k_mem_dealloc(p32);
+	k_mem_dealloc(p34);
+	k_mem_dealloc(p36);
+	k_mem_dealloc(p39);
+	k_mem_dealloc(p38);
+	void * p42 = k_mem_alloc(42);
+	k_mem_dealloc(p42);
+
 	unsigned int end = timer_get_current_val(2);
 
 	// Clock counts down
@@ -212,7 +298,7 @@ int heap_leakage_test() {
 }
 
 int test_mem(void) {
-
+//	unsigned int start = timer_get_current_val(2);
 	int result = heap_leakage_test();
 	switch (result) {
 	case CODE_MEM_INIT:
@@ -234,7 +320,8 @@ int test_mem(void) {
 	default:
 		break;
 	}
-
+//	unsigned int end = timer_get_current_val(2);
+//	printf("This took %u us\r\n", start - end);
 	return result == CODE_SUCCESS;
 }
 #endif
