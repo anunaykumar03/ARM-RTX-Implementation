@@ -140,6 +140,9 @@ void* k_mem_alloc(size_t size) {
         if (FREE_IS_FL_SET(curr_node->size) && NO_FL_SIZE(curr_node->size) >= find_size) {
             FREE_CLEAR_FL(curr_node->size);
             unsigned int size_left = curr_node->size - find_size;
+            if(size_left < 8){
+            	size_left = 0;
+            }
             if (size_left != 0) {
             	// split node
             	node_t *temp = (node_t *)((unsigned int)curr_node + find_size);
@@ -176,7 +179,9 @@ int k_mem_dealloc(void *ptr) {
             // coalesce with prev node
             if (prev_node != NULL && FREE_IS_FL_SET(prev_node->size)){
                 prev_node->size += curr_node->size;
+//                prev_node->size = NO_FL_SIZE(prev_node->size) + curr_node->size;
                 prev_node->next = curr_node->next;
+//                FREE_SET_FL(prev_node->size);
             }
             // set free flag, this wont do anything if coalesced with prev node
             FREE_SET_FL(curr_node->size);
