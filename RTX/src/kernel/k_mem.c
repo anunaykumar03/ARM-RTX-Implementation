@@ -45,6 +45,7 @@
 
 #include "k_mem.h"
 #include "Serial.h"
+#include "printf.h"
 //#define DEBUG_0
 #ifdef DEBUG_0
 #include "printf.h"
@@ -114,7 +115,7 @@ int k_mem_init(void) {
     }
     // create linked list 
     head = (node_t *)end_addr;
-    head->size = RAM_END-end_addr;
+    head->size = RAM_END-end_addr+1;
     FREE_SET_FL(head->size);
     head->next = NULL;
 
@@ -140,7 +141,7 @@ void* k_mem_alloc(size_t size) {
         if (FREE_IS_FL_SET(curr_node->size) && NO_FL_SIZE(curr_node->size) >= find_size) {
             FREE_CLEAR_FL(curr_node->size);
             unsigned int size_left = curr_node->size - find_size;
-            if(size_left < 8){
+            if(size_left < sizeof(node_t)){
             	size_left = 0;
             }
             if (size_left != 0) {
@@ -162,14 +163,14 @@ void* k_mem_alloc(size_t size) {
 }
 
 int k_mem_dealloc(void *ptr) {
-    if (ptr == NULL){
-        return RTX_OK;
+    if ((ptr == NULL) || ((unsigned int)ptr < 0x8) || ((unsigned int)ptr & 0x3)){
+        return RTX_ERR;
     }
 
     node_t *node_ptr = ((node_t *)ptr - 1);
     node_t *curr_node = head;
     node_t *prev_node = NULL;
-    while (curr_node != NULL){
+    while (curr_node != NULL && curr_node <= ptr){
         if (node_ptr == curr_node){
             // coalesce with next node
             if (curr_node->next != NULL && FREE_IS_FL_SET(curr_node->next->size)){
@@ -180,8 +181,8 @@ int k_mem_dealloc(void *ptr) {
             if (prev_node != NULL && FREE_IS_FL_SET(prev_node->size)){
                 prev_node->size += curr_node->size;
 //                prev_node->size = NO_FL_SIZE(prev_node->size) + curr_node->size;
-                prev_node->next = curr_node->next;
 //                FREE_SET_FL(prev_node->size);
+                prev_node->next = curr_node->next;
             }
             // set free flag, this wont do anything if coalesced with prev node
             FREE_SET_FL(curr_node->size);
@@ -202,7 +203,7 @@ int k_mem_count_extfrag(size_t size) {
     node_t *curr_node = head;
     unsigned int count = 0;
     while (curr_node != NULL) {
-        if (FREE_IS_FL_SET(curr_node->size) && curr_node->size <= size){
+        if (FREE_IS_FL_SET(curr_node->size) && curr_node->size < size){
             ++count;
         }
         curr_node = curr_node->next;
