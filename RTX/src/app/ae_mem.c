@@ -326,6 +326,18 @@ int test_mem(void) {
 }
 #endif
 
+#if TEST == 5
+ int test_mem(void) {
+ 	printf("Start test %d\r\n", TEST);
+ 	void *p1 = k_mem_alloc(100);
+ 	void *p2 = k_mem_alloc(100);
+ 	k_mem_dealloc(p1);
+ 	void *p3 = k_mem_alloc(93);
+ 	return TRUE;
+ }
+#endif
+
+
 /*
  *===========================================================================
  *                             END OF FILE

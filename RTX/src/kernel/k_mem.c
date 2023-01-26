@@ -50,6 +50,7 @@
 #ifdef DEBUG_0
 #include "printf.h"
 #endif  /* DEBUG_0 */
+#include "printf.h"
 
 #define SET_BIT(var, bit) (var |= (1U << bit))
 #define CLEAR_BIT(var, bit) (var &= ~(1U << bit))
@@ -130,7 +131,7 @@ void* k_mem_alloc(size_t size) {
 #ifdef DEBUG_0
     printf("k_mem_alloc: requested memory size = %d\r\n", size);
 #endif /* DEBUG_0 */
-
+    printf("size of node is %d\r\n", sizeof(node_t));
     // round size up to nearest multiple of 4
     if(size & 0x3){
         size = (size & ~0x3) + 4;
@@ -153,6 +154,7 @@ void* k_mem_alloc(size_t size) {
                 curr_node->next = temp;
                 curr_node->size = find_size; // note that for both free and alloced nodes, the size is total size including sizeof(node_t)
             }
+            printf("kmemalloc: given size = %d\r\n",NO_FL_SIZE(curr_node->size) );
             return (void *)((unsigned int)curr_node + sizeof(node_t));
         }
         curr_node = curr_node->next;
