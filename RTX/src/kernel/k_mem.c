@@ -72,6 +72,13 @@ struct node_t {
     node_t *next;
 };
 
+typedef struct {
+	node_t* ptr; // ptr to middle of list
+	signed int   balance; // number of nodes on right - number of nodes on left
+	unsigned int left_max_size; // largest free node on left side
+	unsigned int right_max_size; // largest free node on right side
+} track_t;
+
 /*
  *==========================================================================
  *                            GLOBAL VARIABLES
@@ -90,6 +97,9 @@ U32 g_p_stacks[MAX_TASKS][U_STACK_SIZE >> 2] __attribute__((aligned(8)));
 
 // pointer to start of list
 node_t *head;
+
+// track middle of list and largest free node on either side
+track_t middle;
 
 /*
  *===========================================================================
@@ -119,6 +129,11 @@ int k_mem_init(void) {
     head->size = RAM_END-end_addr+1;
     FREE_SET_FL(head->size);
     head->next = NULL;
+
+    middle.ptr = head;
+    middle.balance = 0;
+    middle.left_max_size = 0;
+    middle.right_max_size = 0;
 
 #ifdef DEBUG_0
     printf("k_mem_init: image ends at 0x%x\r\n", end_addr);
@@ -153,6 +168,17 @@ void* k_mem_alloc(size_t size) {
                 temp->next = curr_node->next;
                 curr_node->next = temp;
                 curr_node->size = find_size; // note that for both free and alloced nodes, the size is total size including sizeof(node_t)
+                if(curr_node >= middle.ptr){
+					++middle.balance;
+				}
+				else {
+					--middle.balance;
+				}
+            }
+            if (middle.balance > 1){
+            	// move right
+            	middle.ptr = middle.ptr->next;
+            	middle.balance -= 2;
             }
             //printf("kmemalloc: given size = %d\r\n",NO_FL_SIZE(curr_node->size) );
             return (void *)((unsigned int)curr_node + sizeof(node_t));
@@ -178,11 +204,26 @@ int k_mem_dealloc(void *ptr) {
     	return RTX_ERR;
     }
 
-    while (curr_node != NULL && curr_node <= ptr){
+    if(node_ptr > middle.ptr){
+    	curr_node = middle.ptr;
+    }
+
+    while (curr_node != NULL && curr_node <= node_ptr){
         if (node_ptr == curr_node){
             // coalesce with next node
             if (curr_node->next != NULL && FREE_IS_FL_SET(curr_node->next->size)){
                 curr_node->size += NO_FL_SIZE(curr_node->next->size);
+
+                if(curr_node->next == middle.ptr){
+                	middle.ptr = curr_node;
+                	++middle.balance;
+                }
+                else if (curr_node < middle.ptr){
+                	++middle.balance;
+                } else {
+                	--middle.balance;
+                }
+
                 curr_node->next = curr_node->next->next;
             }
             // coalesce with prev node
@@ -191,6 +232,22 @@ int k_mem_dealloc(void *ptr) {
 //                prev_node->size = NO_FL_SIZE(prev_node->size) + curr_node->size;
 //                FREE_SET_FL(prev_node->size);
                 prev_node->next = curr_node->next;
+
+                if(curr_node == middle.ptr){
+                	middle.ptr = prev_node;
+                	++middle.balance;
+                }
+                else if (curr_node < middle.ptr){
+                	++middle.balance;
+                } else {
+                	--middle.balance;
+                }
+            }
+
+            if (middle.balance > 1){
+            	// move right
+            	middle.ptr = middle.ptr->next;
+            	middle.balance -= 2;
             }
             // set free flag, this wont do anything if coalesced with prev node
             FREE_SET_FL(curr_node->size);
