@@ -110,7 +110,7 @@ U32* k_alloc_p_stack(task_t tid)
 int k_mem_init(void) {
     unsigned int end_addr = (unsigned int) &Image$$ZI_DATA$$ZI$$Limit;
     // check region size
-    if (RAM_END - end_addr < sizeof(node_t)){
+    if (RAM_END - end_addr + 1 < sizeof(node_t)){ // fits header but wont be able to alloc anything, is this ok?
         // free space too small to manage
         return RTX_ERR;
     }
@@ -131,7 +131,7 @@ void* k_mem_alloc(size_t size) {
 #ifdef DEBUG_0
     printf("k_mem_alloc: requested memory size = %d\r\n", size);
 #endif /* DEBUG_0 */
-    printf("size of node is %d\r\n", sizeof(node_t));
+    //printf("size of node is %d\r\n", sizeof(node_t));
     // round size up to nearest multiple of 4
     if(size & 0x3){
         size = (size & ~0x3) + 4;
@@ -154,7 +154,7 @@ void* k_mem_alloc(size_t size) {
                 curr_node->next = temp;
                 curr_node->size = find_size; // note that for both free and alloced nodes, the size is total size including sizeof(node_t)
             }
-            printf("kmemalloc: given size = %d\r\n",NO_FL_SIZE(curr_node->size) );
+            //printf("kmemalloc: given size = %d\r\n",NO_FL_SIZE(curr_node->size) );
             return (void *)((unsigned int)curr_node + sizeof(node_t));
         }
         curr_node = curr_node->next;
@@ -165,13 +165,19 @@ void* k_mem_alloc(size_t size) {
 }
 
 int k_mem_dealloc(void *ptr) {
-    if ((ptr == NULL) || ((unsigned int)ptr < 0x8) || ((unsigned int)ptr & 0x3)){
+    if ((ptr == NULL) || ((unsigned int)ptr < (unsigned int)head + 8) || ((unsigned int)ptr & 0x3) || ((unsigned int)ptr > RAM_END) ){
         return RTX_ERR;
     }
 
     node_t *node_ptr = ((node_t *)ptr - 1);
     node_t *curr_node = head;
     node_t *prev_node = NULL;
+
+    if (FREE_IS_FL_SET(node_ptr->size)){
+    	// check if node already free
+    	return RTX_ERR;
+    }
+
     while (curr_node != NULL && curr_node <= ptr){
         if (node_ptr == curr_node){
             // coalesce with next node
