@@ -70,20 +70,53 @@ int ae_set_sys_info(RTX_SYS_INFO *sys_info) {
  *****************************************************************************/
 
 void ae_set_task_info(RTX_TASK_INFO *tasks, int num_tasks) {
-	if (tasks == NULL) {
-		return;
-	}
 
-	for (int i = 0; i < num_tasks; i++) {
-		tasks[i].k_stack_size = 0x200;
-		tasks[i].prio = 100;
-		tasks[i].priv = 0;
-	}
+    if (tasks == NULL) {
+    	printf("[ERROR] RTX_TASK_INFO undefined\n\r");
+        return;
+    }
 
+#if TEST == 1
+    printf("RUNNING\r\n");
+
+	tasks[0].prio = 100;
 	tasks[0].priv = 1;
 	tasks[0].ptask = &ktask1;
-	return;
+	tasks[0].k_stack_size = (0x200);
+
+  	tasks[1].prio = 125;
+	tasks[1].priv = 1;
+	tasks[1].ptask = &ktask2;
+	tasks[1].k_stack_size = (0x200);
+
+  	tasks[2].prio = 150;
+	tasks[2].priv = 1;
+	tasks[2].ptask = &ktask3;
+	tasks[2].k_stack_size = (0x200);
+
+#endif
+
+
+#if TEST == 2
+    printf("RUNNING\r\n");
+  	tasks[0].prio = 100;
+	tasks[0].priv = 1;
+	tasks[0].ptask = &ktask1;
+	tasks[0].k_stack_size = 0x200;
+
+#endif
+
+#if TEST == 3
+    printf("RUNNING\r\n");
+
+  	tasks[0].prio = 125;
+	tasks[0].priv = 1;
+	tasks[0].ptask = &ktask1;
+	tasks[0].k_stack_size = 0x200;
+
+#endif
 }
+
 /*
  *===========================================================================
  *                             END OF FILE
