@@ -45,12 +45,12 @@
 
 #include "k_mem.h"
 #include "Serial.h"
-#include "printf.h"
+// #include "printf.h"
 //#define DEBUG_0
 #ifdef DEBUG_0
 #include "printf.h"
 #endif  /* DEBUG_0 */
-#include "printf.h"
+// #include "printf.h"
 
 #define SET_BIT(var, bit) (var |= (1U << bit))
 #define CLEAR_BIT(var, bit) (var &= ~(1U << bit))
@@ -60,6 +60,7 @@
 #define FREE_SET_FL(a) (SET_BIT(a, FREE_SET_FL_POSITION))
 #define FREE_CLEAR_FL(a) (CLEAR_BIT(a, FREE_SET_FL_POSITION))
 #define NO_FL_SIZE(a) (a & ~(1U << FREE_SET_FL_POSITION))
+#define RAM_END1 RAM_END+1
 
 /*
  *==========================================================================
@@ -115,13 +116,13 @@ U32* k_alloc_p_stack(task_t tid)
 int k_mem_init(void) {
     unsigned int end_addr = (unsigned int) &Image$$ZI_DATA$$ZI$$Limit;
     // check region size
-    if (RAM_END - end_addr + 1 < sizeof(node_t)){ // fits header but wont be able to alloc anything, is this ok?
+    if (RAM_END1 - end_addr < sizeof(node_t)){ // fits header but wont be able to alloc anything, is this ok?
         // free space too small to manage
         return RTX_ERR;
     }
     // create linked list 
     head = (node_t *)end_addr;
-    head->size = RAM_END-end_addr+1;
+    head->size = RAM_END1-end_addr;
     head->next = NULL;
     free_head = head;
 
@@ -138,9 +139,11 @@ void* k_mem_alloc(size_t size) {
 #endif /* DEBUG_0 */
     //printf("size of node is %d\r\n", sizeof(node_t));
     // round size up to nearest multiple of 4
-    if(size & 0x3){
-        size = (size & ~0x3) + 4;
-    }
+    // if(size & 0x3){
+    //     size = (size & ~0x3) + 4;
+    // }
+    size = (size + 3) & ~3;
+    // size = size + 4 - (size & 0x3)
     unsigned int find_size = size + sizeof(header_t);
     node_t *curr_node = free_head;
     node_t *prev_node = NULL;
@@ -186,7 +189,7 @@ int k_mem_dealloc(void *ptr) {
     }
 
     node_t *temp = start_node;
-	while (temp != end_node && (unsigned int)temp < RAM_END+1){
+	while ((unsigned int)temp < RAM_END1 && temp != end_node){
 		if (temp == node_ptr){
 			// found the node to free
 			temp->next = end_node;
