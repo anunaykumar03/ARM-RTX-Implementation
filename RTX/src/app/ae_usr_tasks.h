@@ -29,6 +29,11 @@
 #ifndef USR_TASK_H_
 #define USR_TASK_H_
 
+void utask1(void);
+void utask2(void);
+void utask3(void);
+
+
 #endif // ! USR_TASK_H_
 
 /*
