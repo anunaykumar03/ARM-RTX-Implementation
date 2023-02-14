@@ -141,9 +141,11 @@ The memory map of the OS image may look like the following:
  */
 
 void switch_task(task_t tid, U8 exit_old, U8 remove_new_from_heap){ // args: tid of task to switch to
-        TCB *p_old_task = gp_current_task;
+        volatile TCB *p_old_task = gp_current_task;
+        volatile TCB* new_gp_curr;
         gp_current_task = &g_tcbs[tid];
-        gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
+        new_gp_curr = gp_current_task;
+        new_gp_curr->state = RUNNING; // change state of the to-be-switched-in  tcb
         p_old_task->state = DORMANT;      // change state of the to-be-switched-out tcb
 
 	if(remove_new_from_heap){
@@ -206,6 +208,8 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     p_tcb->priv     = 1;
     p_tcb->tid      = TID_NULL;
     p_tcb->state    = RUNNING;
+    p_tcb->countL	= 0;
+    p_tcb->countH 	= 0;
     g_num_active_tasks++;
     gp_current_task = p_tcb;
 
@@ -261,6 +265,8 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     p_tcb->state = READY;
     p_tcb->prio = p_taskinfo->prio;
     p_tcb->priv = p_taskinfo->priv;
+    p_tcb->countL = 0;
+    p_tcb->countH = 0;
 
     /*---------------------------------------------------------------
      *  Step1: allocate kernel stack for the task
@@ -417,9 +423,13 @@ int k_tsk_run_new(void)
 int k_tsk_yield(void)
 {
     TCB *p_potential_new_task_to_run = scheduler();
+    volatile TCB* thing = gp_current_task;
 
-    if (p_potential_new_task_to_run == NULL || gp_current_task->prio < p_potential_new_task_to_run->prio){
+    if (p_potential_new_task_to_run == NULL || (gp_current_task->prio < p_potential_new_task_to_run->prio && gp_current_task->prio != 0)){
         // keep running current task
+    	if(thing->prio == 0){
+    		printf("HELLO\n");
+    	}
         return RTX_OK;
     }
 
