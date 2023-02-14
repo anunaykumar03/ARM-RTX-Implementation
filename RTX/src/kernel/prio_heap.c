@@ -7,14 +7,14 @@ unsigned int heap_size = 0;
 unsigned int countL = 0;
 unsigned int countH = 0;
 
-inline void sched_pop(){
-    if (heap_size == 0){
-        return NULL;
-    }
-    sched_remove(sched_heap[0]);
-}
+//inline void sched_pop(){
+//    if (heap_size == 0){
+//        return;
+//    }
+//    sched_remove(sched_heap[0]);
+//}
 
-inline TCB* sched_peak(){
+inline TCB* sched_peak(void){
     if (heap_size == 0){
         return NULL;
     }
