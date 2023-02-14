@@ -63,12 +63,14 @@
  * @note  You will need to add more fields to this structure.
  */
 typedef struct tcb {
-    struct tcb* 	next;   /**> next tcb, not used in this example         */
-    U32*        	ksp;    /**> ksp of the task, TCB_KSP_OFFSET = 4        */
-    U8          	tid;    /**> task id                                    */
-    U8          	prio;   /**> Execution priority                         */
-    U8          	state;  /**> task state                                 */
-    U8          	priv;   /**> = 0 unprivileged, =1 privileged            */
+    U32*        	ksp;      /**> ksp of the task, TCB_KSP_OFFSET = 4        */
+    U8          	tid;      /**> task id                                    */
+    U8          	prio;     /**> Execution priority                         */
+    U32          	countL;   /**> Entry count                                */
+    U32          	countH;   /**> Entry count                                */
+    U32             heap_idx; /**> Index in scheduler heap                    */
+    U8          	state;    /**> task state                                 */
+    U8          	priv;     /**> = 0 unprivileged, =1 privileged            */
 } TCB;
 
 /*

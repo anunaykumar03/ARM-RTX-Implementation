@@ -75,6 +75,7 @@ struct node_t {
 
 typedef struct {
 	unsigned int size;
+//    unsigned int owner_tid;
 } header_t;
 
 /*
