@@ -18,12 +18,38 @@ inline TCB* sched_peak(void){
     if (heap_size == 0){
         return NULL;
     }
+    if(g_tcbs[sched_heap[0]].heap_idx != 0){
+    	while(1){}
+    }
     return &g_tcbs[sched_heap[0]];
+}
+
+void check_heap(){
+	volatile int heap_size1 = heap_size;
+    volatile TCB *p_old_task = gp_current_task;
+    volatile TCB *first_task = &g_tcbs[sched_heap[0]];
+
+	if(heap_size1 != 1 || p_old_task->tid != 0){
+		while(heap_size1 != 1 || p_old_task->tid != 0 || first_task->tid != 0){
+
+		}
+	}
+
+	return;
 }
 
 //returns 1 if a has higher prio than b
 //returns 0 if a is has lower prio than b
+volatile int index_a1;
+volatile int index_b1;
+
 int has_higher_prio(unsigned int index_a, unsigned int index_b){
+	index_a1 = index_a;
+	index_b1 = index_b;
+	if(index_a1 >= MAX_TASKS  || index_b1 >= MAX_TASKS){
+		while(index_a1 >= MAX_TASKS  || index_b1 >= MAX_TASKS){};
+	}
+
     if(g_tcbs[sched_heap[index_a]].prio == 0) return 0;
     if(g_tcbs[sched_heap[index_b]].prio == 0) return 1;
     // optimize these comparisons
@@ -74,7 +100,7 @@ void down_heap(unsigned int index){
     while((index << 1) < heap_size){
         smaller_child = index << 1;
         //if right child is has higher prio than left child
-        if(((index << 1) + 1 < heap_size) && has_higher_prio(index << 1 + 1, index << 1)){
+        if(((index << 1) + 1 < heap_size) && has_higher_prio((index << 1) + 1, index << 1)){
             smaller_child++;
         }
 
@@ -108,7 +134,20 @@ void sched_insert(TCB *tcb){
 
 void sched_remove(task_t tid){
     unsigned int old_idx = g_tcbs[tid].heap_idx;
-    sched_heap[old_idx] = sched_heap[--heap_size];
-    g_tcbs[sched_heap[old_idx]].heap_idx = old_idx;
-    down_heap(old_idx);
+    volatile int print_heap = 0;
+    if(print_heap == 1){
+    	for(int i = 0;i < heap_size;i++){
+    		printf("i: %d, tid: %d, prio: %d\n", i, sched_heap[i], g_tcbs[sched_heap[i]].prio);
+    	}
+    }
+    --heap_size;
+    sched_heap[old_idx] = sched_heap[heap_size];
+    g_tcbs[sched_heap[heap_size]].heap_idx = old_idx;
+
+    //check if we have higher priority than parent. If so, upheap, else downheap.
+    if(old_idx > 0 && has_higher_prio(old_idx, old_idx >> 1)){
+    	up_heap(old_idx);
+    } else{
+        down_heap(old_idx);
+    }
 }

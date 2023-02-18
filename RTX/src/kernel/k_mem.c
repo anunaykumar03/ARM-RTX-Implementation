@@ -103,6 +103,9 @@ node_t *free_head;
  *===========================================================================
  */
 
+void* k_mem_alloc_internals(size_t size, task_t owner);
+int k_mem_dealloc_internals(void *ptr, task_t owner);
+
 U32* k_alloc_k_stack(task_t tid)
 {
     return g_k_stacks[tid+1];
@@ -111,10 +114,18 @@ U32* k_alloc_k_stack(task_t tid)
 U32* k_alloc_p_stack(task_t tid)
 {
 	U32 size = U_rtx_task_infos[tid-1].u_stack_size;
-	U8 *ptr = k_mem_alloc(size);
+	U8 *ptr = k_mem_alloc_internals(size, (task_t) 0); // set owner to kernel
+	g_tcbs[tid].u_stack_lo = ptr;
+	if(ptr == NULL) return NULL;
 	return (U32 *)((U32)(ptr + size - 1) & ~(0x3)); // return hi addr
 //    return g_p_stacks[tid+1];
 }
+
+int k_dealloc_p_stack(task_t tid)
+{
+	return k_mem_dealloc_internals(g_tcbs[tid].u_stack_lo, 0); // return hi addr
+}
+
 
 int k_mem_init(void) {
     unsigned int end_addr = (unsigned int) &Image$$ZI_DATA$$ZI$$Limit;
@@ -191,9 +202,10 @@ int k_mem_dealloc_internals(void *ptr, task_t owner){
     node_t *node_ptr = (node_t *)((header_t *)ptr - 1);
     node_t *start_node = head;
     node_t *end_node = free_head;
+    volatile header_t * t_check = (header_t *)node_ptr;
 
     // check ownership
-    if (owner != ((header_t *)node_ptr)->owner_tid) {
+    if (owner != t_check->owner_tid) {
     	return RTX_ERR;
     }
 

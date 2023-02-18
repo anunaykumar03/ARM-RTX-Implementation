@@ -388,14 +388,14 @@ __asm void k_tsk_switch(TCB *p_tcb_old)
 int k_tsk_run_new(void)
 {
     TCB *p_tcb_old = NULL;
-    
+
     if (gp_current_task == NULL) {
     	return RTX_ERR;
     }
 
     p_tcb_old = gp_current_task;
     gp_current_task = scheduler();
-    
+
     if ( gp_current_task == NULL  ) {
         gp_current_task = p_tcb_old;        // revert back to the old task
         return RTX_ERR;
@@ -405,6 +405,8 @@ int k_tsk_run_new(void)
     if (gp_current_task != p_tcb_old) {
         gp_current_task->state = RUNNING;   // change state of the to-be-switched-in  tcb
         p_tcb_old->state = READY;           // change state of the to-be-switched-out tcb
+        sched_remove(gp_current_task->tid);
+        sched_insert(p_tcb_old);
         k_tsk_switch(p_tcb_old);            // switch stacks
     }
 
@@ -524,6 +526,9 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
 
 void k_tsk_exit(void) 
 {
+    if (g_tcbs[gp_current_task->tid].priv == 0 && k_dealloc_p_stack(gp_current_task->tid) == RTX_ERR){
+    	while (1){}
+    }
     // set tid number to free
     U_TID_Q[U_TID_tail] = gp_current_task->tid;
     U_TID_tail = ++U_TID_tail % (MAX_TASKS-1);

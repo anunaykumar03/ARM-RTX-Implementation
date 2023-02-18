@@ -107,7 +107,7 @@ void ae_set_task_info(RTX_TASK_INFO *tasks, int num_tasks) {
 #endif
 
 #if TEST == 3
-    printf("RUNNING\r\n");
+    printf("RUNNING HERE\r\n");
 
   	tasks[0].prio = 125;
 	tasks[0].priv = 1;

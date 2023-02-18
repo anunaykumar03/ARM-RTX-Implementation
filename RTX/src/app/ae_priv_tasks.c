@@ -32,6 +32,7 @@
 #include "Serial.h"
 #include "printf.h"
 #include "k_mem.h"
+#include "prio_heap.h"
 
 task_t ktid1;
 task_t ktid2;
@@ -184,10 +185,13 @@ void ktask1(void){
 			internal_error++;
 		}
 	}
+	volatile int temp_counter;
 	if(internal_error)
 		eflag++;
-	if(counter != MAX_TASKS-4)
+	temp_counter = counter;
+	if(temp_counter != MAX_TASKS-4)
 		eflag++;
+	check_heap();
 
 
 	printf("============================================\r\n");
