@@ -229,7 +229,7 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
         U_TID_Q[i-1]=i;
     }
     U_TID_head = num_tasks;
-    U_TID_tail = num_tasks;
+    U_TID_tail = 0;
 
     return RTX_OK;
 }
@@ -459,7 +459,7 @@ int k_tsk_yield(void)
 
 int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size)
 {
-    if (g_num_active_tasks == MAX_TASKS-1 || stack_size < U_STACK_SIZE || prio == 255 || prio == 0) return RTX_ERR;
+    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS-1 || stack_size < U_STACK_SIZE || prio == 255 || prio == 0) return RTX_ERR;
     // invalid state of RTX??????
 
 //    // alloc stack for user task
@@ -557,7 +557,7 @@ int k_tsk_set_prio(task_t task_id, U8 prio)
     if (gp_current_task->tid == task_id){
         gp_current_task->prio = prio;
         if (prio >= sched_peak()->prio){
-		switch_task(sched_peak()->tid, 0, 1);
+        	switch_task(sched_peak()->tid, 0, 1);
             // run new task and re-insert current task
          //   TCB *p_old_task = gp_current_task;
          //   gp_current_task = sched_peak();

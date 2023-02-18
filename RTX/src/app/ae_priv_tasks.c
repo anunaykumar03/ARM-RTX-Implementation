@@ -191,7 +191,7 @@ void ktask1(void){
 	temp_counter = counter;
 	if(temp_counter != MAX_TASKS-4)
 		eflag++;
-	check_heap();
+	//check_heap();
 
 
 	printf("============================================\r\n");

@@ -2,7 +2,7 @@
 #include "k_inc.h"
 #include "prio_heap.h"
 
-unsigned int sched_heap[MAX_TASKS];
+unsigned int sched_heap[MAX_TASKS+1];
 unsigned int heap_size = 0;
 unsigned int countL = 0;
 unsigned int countH = 0;
@@ -18,16 +18,35 @@ inline TCB* sched_peak(void){
     if (heap_size == 0){
         return NULL;
     }
-    if(g_tcbs[sched_heap[0]].heap_idx != 0){
-    	while(1){}
+    if(g_tcbs[sched_heap[1]].heap_idx != 1){
+    	volatile unsigned int heaps[15];
+    	volatile TCB* tcbs[15];
+    	for(int i = 1; i < 15;i++){
+    		heaps[i] = sched_heap[i];
+    		tcbs[i] = &g_tcbs[sched_heap[i]];
+    	}
+
+
+    	while(1){
+        	for(int i = 1; i < 15;i++){
+        		if(tcbs[i]->heap_idx != heaps[i]){
+        			break;
+        		}
+        		heaps[i] = sched_heap[i];
+        		tcbs[i] = &g_tcbs[sched_heap[i]];
+        		if(i == 14){
+        			return tcbs[0];
+        		}
+        	}
+    	}
     }
-    return &g_tcbs[sched_heap[0]];
+    return &g_tcbs[sched_heap[1]];
 }
 
 void check_heap(){
 	volatile int heap_size1 = heap_size;
     volatile TCB *p_old_task = gp_current_task;
-    volatile TCB *first_task = &g_tcbs[sched_heap[0]];
+    volatile TCB *first_task = &g_tcbs[sched_heap[1]];
 
 	if(heap_size1 != 1 || p_old_task->tid != 0){
 		while(heap_size1 != 1 || p_old_task->tid != 0 || first_task->tid != 0){
@@ -77,7 +96,7 @@ int has_higher_prio(unsigned int index_a, unsigned int index_b){
 
 void up_heap(unsigned int index){
     unsigned int temp = 0;
-    while(index > 0){
+    while(index > 1){
         //current prio is higher than parent
         if(has_higher_prio(index, index >> 1)){
             temp = sched_heap[index];
@@ -97,10 +116,10 @@ void up_heap(unsigned int index){
 void down_heap(unsigned int index){
     int smaller_child;
     unsigned int temp = 0;
-    while((index << 1) < heap_size){
+    while((index << 1) <= heap_size){
         smaller_child = index << 1;
         //if right child is has higher prio than left child
-        if(((index << 1) + 1 < heap_size) && has_higher_prio((index << 1) + 1, index << 1)){
+        if(((index << 1) + 1 <= heap_size) && has_higher_prio((index << 1) + 1, index << 1)){
             smaller_child++;
         }
 
@@ -121,6 +140,7 @@ void down_heap(unsigned int index){
 }
 
 void sched_insert(TCB *tcb){
+	heap_size++;
     sched_heap[heap_size] = tcb->tid;
     tcb->heap_idx = heap_size;
     tcb->countL = countL++;
@@ -129,7 +149,6 @@ void sched_insert(TCB *tcb){
         ++countH;
     }
     up_heap(heap_size);
-    ++heap_size;
 }
 
 void sched_remove(task_t tid){
@@ -140,12 +159,12 @@ void sched_remove(task_t tid){
     		printf("i: %d, tid: %d, prio: %d\n", i, sched_heap[i], g_tcbs[sched_heap[i]].prio);
     	}
     }
-    --heap_size;
     sched_heap[old_idx] = sched_heap[heap_size];
     g_tcbs[sched_heap[heap_size]].heap_idx = old_idx;
+    heap_size--;
 
     //check if we have higher priority than parent. If so, upheap, else downheap.
-    if(old_idx > 0 && has_higher_prio(old_idx, old_idx >> 1)){
+    if(old_idx > 1 && has_higher_prio(old_idx, old_idx >> 1)){
     	up_heap(old_idx);
     } else{
         down_heap(old_idx);
