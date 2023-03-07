@@ -141,11 +141,9 @@ The memory map of the OS image may look like the following:
  */
 
 void switch_task(task_t tid, U8 exit_old, U8 remove_new_from_heap){ // args: tid of task to switch to
-        volatile TCB *p_old_task = gp_current_task;
-        volatile TCB* new_gp_curr;
+        TCB *p_old_task = gp_current_task;
         gp_current_task = &g_tcbs[tid];
-        new_gp_curr = gp_current_task;
-        new_gp_curr->state = RUNNING; // change state of the to-be-switched-in  tcb
+        gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
         p_old_task->state = DORMANT;      // change state of the to-be-switched-out tcb
 
 	if(remove_new_from_heap){
@@ -170,7 +168,14 @@ void switch_task(task_t tid, U8 exit_old, U8 remove_new_from_heap){ // args: tid
 
 TCB *scheduler(void)
 {
-    return sched_peak();
+	TCB * p_new_task = sched_peak();
+	sched_remove(p_new_task->tid);
+	if (gp_current_task->state != DORMANT){
+		sched_insert(gp_current_task);
+	}
+	return p_new_task;
+
+    //return sched_peak();
 //    task_t tid = gp_current_task->tid;
 //    return &g_tcbs[(++tid)%g_num_active_tasks];
 
@@ -307,8 +312,8 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
         //********************************************************************//
         //*** allocate user stack from the user space, not implemented yet ***//
         //********************************************************************//
-	void *p_stack = k_alloc_p_stack(tid);
-	if (p_stack == NULL) return RTX_ERR;
+		void *p_stack = k_alloc_p_stack(tid);
+		if (p_stack == NULL) return RTX_ERR;
         *(--sp) = (U32) p_stack;
 
         // uR12, uR11, ..., uR0
@@ -404,9 +409,9 @@ int k_tsk_run_new(void)
     // at this point, gp_current_task != NULL and p_tcb_old != NULL
     if (gp_current_task != p_tcb_old) {
         gp_current_task->state = RUNNING;   // change state of the to-be-switched-in  tcb
-        p_tcb_old->state = READY;           // change state of the to-be-switched-out tcb
-        sched_remove(gp_current_task->tid);
-        sched_insert(p_tcb_old);
+        if (p_tcb_old->state != DORMANT){
+            p_tcb_old->state = READY;           // change state of the to-be-switched-out tcb
+        }
         k_tsk_switch(p_tcb_old);            // switch stacks
     }
 
@@ -424,30 +429,29 @@ int k_tsk_run_new(void)
  *****************************************************************************/
 int k_tsk_yield(void)
 {
-    TCB *p_potential_new_task_to_run = scheduler();
-    volatile TCB* thing = gp_current_task;
+	if (gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0){
+		return RTX_OK;
+	}
+//    TCB *p_potential_new_task_to_run = scheduler();
+//
+//    if (p_potential_new_task_to_run == NULL || (gp_current_task->prio < p_potential_new_task_to_run->prio && gp_current_task->prio != 0)){
+//        // keep running current task
+//        return RTX_OK;
+//    }
+//
+//    // otherwise switch to new task
+//    switch_task(p_potential_new_task_to_run->tid, 0, 1);
+//    //TCB *p_old_task = gp_current_task;
+//    //gp_current_task = p_potential_new_task_to_run;
+//    //gp_current_task->state = RUNNING;  // change state of the to-be-switched-in  tcb
+//    //p_old_task->state = READY;         // change state of the to-be-switched-out tcb
+//    //sched_pop();
+//    //sched_insert(p_old_task);
+//    //k_tsk_switch(p_old_task);          // switch stacks
+//
+//    return RTX_OK;
 
-    if (p_potential_new_task_to_run == NULL || (gp_current_task->prio < p_potential_new_task_to_run->prio && gp_current_task->prio != 0)){
-        // keep running current task
-    	if(thing->prio == 0){
-    		printf("HELLO\n");
-    	}
-        return RTX_OK;
-    }
-
-    // otherwise switch to new task
-    switch_task(p_potential_new_task_to_run->tid, 0, 1);
-    //TCB *p_old_task = gp_current_task;
-    //gp_current_task = p_potential_new_task_to_run;
-    //gp_current_task->state = RUNNING;  // change state of the to-be-switched-in  tcb
-    //p_old_task->state = READY;         // change state of the to-be-switched-out tcb
-    //sched_pop();
-    //sched_insert(p_old_task);
-    //k_tsk_switch(p_old_task);          // switch stacks
-
-    return RTX_OK;
-
-    //    return k_tsk_run_new();
+    return k_tsk_run_new();
 }
 
 
@@ -459,7 +463,7 @@ int k_tsk_yield(void)
 
 int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size)
 {
-    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS-1 || stack_size < U_STACK_SIZE || prio == 255 || prio == 0) return RTX_ERR;
+    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS-1 || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT) return RTX_ERR;
     // invalid state of RTX??????
 
 //    // alloc stack for user task
@@ -500,21 +504,17 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
 	    return RTX_ERR;
     }
 
+    sched_insert(&g_tcbs[tid]);
     if (prio < gp_current_task->prio){
         // switch to new task
-	    switch_task(tid, 0, 0);
-        //TCB *p_old_task = gp_current_task;
-        //gp_current_task = &g_tcbs[tid];
-        //gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
-        //p_old_task->state = READY;        // change state of the to-be-switched-out tcb
-        //sched_insert(p_old_task);
-        //k_tsk_switch(p_old_task); // switch stacks
+    	k_tsk_run_new();
 
+//	    switch_task(tid, 0, 0);
         return RTX_OK;
     }
 
     // otherwise insert into scheduler ready heap
-    sched_insert(&g_tcbs[tid]);
+//    sched_insert(&g_tcbs[tid]);
 
 #ifdef DEBUG_0
     printf("k_tsk_create: entering...\n\r");
@@ -526,22 +526,18 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
 
 void k_tsk_exit(void) 
 {
-    if (g_tcbs[gp_current_task->tid].priv == 0 && k_dealloc_p_stack(gp_current_task->tid) == RTX_ERR){
-    	while (1){}
-    }
+//    if (g_tcbs[gp_current_task->tid].priv == 0 && k_dealloc_p_stack(gp_current_task->tid) == RTX_ERR){
+//    	while (1){}
+//    }
     // set tid number to free
     U_TID_Q[U_TID_tail] = gp_current_task->tid;
     U_TID_tail = ++U_TID_tail % (MAX_TASKS-1);
     --g_num_active_tasks;
 
     // then run the new task
-    switch_task(sched_peak()->tid, 1, 1);
-    //TCB *p_old_task = gp_current_task;
-    //gp_current_task = sched_peak();
-    //gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
-    //p_old_task->state = DORMANT;        // change state of the to-be-switched-out tcb
-    //k_tsk_switch(p_old_task); // switch stacks
-    //Also remove from heap >:(
+//    switch_task(sched_peak()->tid, 1, 1);
+    gp_current_task->state = DORMANT;
+    k_tsk_run_new();
 
 #ifdef DEBUG_0
     printf("k_tsk_exit: entering...\n\r");
@@ -557,15 +553,9 @@ int k_tsk_set_prio(task_t task_id, U8 prio)
     if (gp_current_task->tid == task_id){
         gp_current_task->prio = prio;
         if (prio >= sched_peak()->prio){
-        	switch_task(sched_peak()->tid, 0, 1);
+        	k_tsk_run_new();
+//        	switch_task(sched_peak()->tid, 0, 1);
             // run new task and re-insert current task
-         //   TCB *p_old_task = gp_current_task;
-         //   gp_current_task = sched_peak();
-         //   gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
-         //   p_old_task->state = READY;        // change state of the to-be-switched-out tcb
-         //   sched_pop();
-         //   sched_insert(p_old_task);
-         //   k_tsk_switch(p_old_task); // switch stacks
         }
         return RTX_OK;
     }
@@ -573,15 +563,9 @@ int k_tsk_set_prio(task_t task_id, U8 prio)
     // else task_id != current task
     g_tcbs[task_id].prio = prio;
     if (prio < gp_current_task->prio){
-	    switch_task(task_id, 0, 1);
+//	    switch_task(task_id, 0, 1);
+    	k_tsk_run_new();
         // preempt, switch to new task
-     //   TCB *p_old_task = gp_current_task;
-     //   gp_current_task = &g_tcbs[task_id];
-     //   gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
-     //   p_old_task->state = READY;        // change state of the to-be-switched-out tcb
-     //   sched_remove(task_id);
-     //   sched_insert(p_old_task);
-     //   k_tsk_switch(p_old_task); // switch stacks
     }
     else {
         sched_remove(task_id);

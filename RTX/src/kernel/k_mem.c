@@ -156,6 +156,9 @@ void* k_mem_alloc_internals(size_t size, task_t owner){
     // if(size & 0x3){
     //     size = (size & ~0x3) + 4;
     // }
+
+    // change to 8 byte aligned
+    // size = (size + 7) & ~7;
     size = (size + 3) & ~3;
     // size = size + 4 - (size & 0x3)
     unsigned int find_size = size + sizeof(header_t);

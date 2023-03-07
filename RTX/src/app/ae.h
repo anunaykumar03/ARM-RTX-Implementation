@@ -50,7 +50,7 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 1
+#define TEST 3
 
 #if TEST == 1
 	extern task_t utid[3];

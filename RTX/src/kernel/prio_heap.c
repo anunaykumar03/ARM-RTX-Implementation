@@ -18,29 +18,30 @@ inline TCB* sched_peak(void){
     if (heap_size == 0){
         return NULL;
     }
-    if(g_tcbs[sched_heap[1]].heap_idx != 1){
-    	volatile unsigned int heaps[15];
-    	volatile TCB* tcbs[15];
-    	for(int i = 1; i < 15;i++){
-    		heaps[i] = sched_heap[i];
-    		tcbs[i] = &g_tcbs[sched_heap[i]];
-    	}
-
-
-    	while(1){
-        	for(int i = 1; i < 15;i++){
-        		if(tcbs[i]->heap_idx != heaps[i]){
-        			break;
-        		}
-        		heaps[i] = sched_heap[i];
-        		tcbs[i] = &g_tcbs[sched_heap[i]];
-        		if(i == 14){
-        			return tcbs[0];
-        		}
-        	}
-    	}
-    }
     return &g_tcbs[sched_heap[1]];
+
+//    if(g_tcbs[sched_heap[1]].heap_idx != 1){
+//    	volatile unsigned int heaps[15];
+//    	volatile TCB* tcbs[15];
+//    	for(int i = 1; i < 15;i++){
+//    		heaps[i] = sched_heap[i];
+//    		tcbs[i] = &g_tcbs[sched_heap[i]];
+//    	}
+//
+//
+//    	while(1){
+//        	for(int i = 1; i < 15;i++){
+//        		if(tcbs[i]->heap_idx != heaps[i]){
+//        			break;
+//        		}
+//        		heaps[i] = sched_heap[i];
+//        		tcbs[i] = &g_tcbs[sched_heap[i]];
+//        		if(i == 14){
+//        			return tcbs[0];
+//        		}
+//        	}
+//    	}
+//    }
 }
 
 void check_heap(){
@@ -153,12 +154,12 @@ void sched_insert(TCB *tcb){
 
 void sched_remove(task_t tid){
     unsigned int old_idx = g_tcbs[tid].heap_idx;
-    volatile int print_heap = 0;
-    if(print_heap == 1){
-    	for(int i = 0;i < heap_size;i++){
-    		printf("i: %d, tid: %d, prio: %d\n", i, sched_heap[i], g_tcbs[sched_heap[i]].prio);
-    	}
-    }
+//    volatile int print_heap = 0;
+//    if(print_heap == 1){
+//    	for(int i = 0;i < heap_size;i++){
+//    		printf("i: %d, tid: %d, prio: %d\n", i, sched_heap[i], g_tcbs[sched_heap[i]].prio);
+//    	}
+//    }
     sched_heap[old_idx] = sched_heap[heap_size];
     g_tcbs[sched_heap[heap_size]].heap_idx = old_idx;
     heap_size--;
