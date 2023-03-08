@@ -140,23 +140,23 @@ The memory map of the OS image may look like the following:
  *===========================================================================
  */
 
-void switch_task(task_t tid, U8 exit_old, U8 remove_new_from_heap){ // args: tid of task to switch to
-        TCB *p_old_task = gp_current_task;
-        gp_current_task = &g_tcbs[tid];
-        gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
-        p_old_task->state = DORMANT;      // change state of the to-be-switched-out tcb
-
-	if(remove_new_from_heap){
-		sched_remove(tid);
-	}
-
-	if(!exit_old){
-        	p_old_task->state = READY;
-        	sched_insert(p_old_task);
-	}
-	
-        k_tsk_switch(p_old_task); // switch stacks
-}
+//void switch_task(task_t tid, U8 exit_old, U8 remove_new_from_heap){ // args: tid of task to switch to
+//        TCB *p_old_task = gp_current_task;
+//        gp_current_task = &g_tcbs[tid];
+//        gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
+//        p_old_task->state = DORMANT;      // change state of the to-be-switched-out tcb
+//
+//	if(remove_new_from_heap){
+//		sched_remove(tid);
+//	}
+//
+//	if(!exit_old){
+//        	p_old_task->state = READY;
+//        	sched_insert(p_old_task);
+//	}
+//
+//        k_tsk_switch(p_old_task); // switch stacks
+//}
 
 /**************************************************************************//**
  * @brief   scheduler, pick the TCB of the next to run task
@@ -478,7 +478,7 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
     U_TID_head = ++U_TID_head % (MAX_TASKS-1);
     ++g_num_active_tasks;
 
-    // assign the task info
+    // assign the task info // we don't need all of these
     RTX_TASK_INFO *task_info = &(U_rtx_task_infos[*task-1]);
     task_info->ptask = task_entry;
 //    task_info->k_stack_hi = k_alloc_k_stack(*task);
