@@ -168,6 +168,7 @@ void switch_task(task_t tid, U8 exit_old, U8 remove_new_from_heap){ // args: tid
 
 TCB *scheduler(void)
 {
+	// modify sched_remove() to pop instead (returns what it removes)
 	TCB * p_new_task = sched_peak();
 	sched_remove(p_new_task->tid);
 	if (gp_current_task->state != DORMANT){
@@ -536,6 +537,7 @@ void k_tsk_exit(void)
 
     // then run the new task
 //    switch_task(sched_peak()->tid, 1, 1);
+    k_dealloc_p_stack(gp_current_task->tid);
     gp_current_task->state = DORMANT;
     k_tsk_run_new();
 
