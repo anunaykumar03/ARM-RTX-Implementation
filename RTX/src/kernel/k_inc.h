@@ -63,6 +63,7 @@
  * @note  You will need to add more fields to this structure.
  */
 typedef struct tcb {
+//	U32				temp;
     U32*        	ksp;        /**> ksp of the task, TCB_KSP_OFFSET = 4        */
     U8          	tid;        /**> task id                                    */
     U8          	prio;       /**> Execution priority                         */
@@ -71,6 +72,7 @@ typedef struct tcb {
     U32             heap_idx;   /**> Index in scheduler heap                    */
     U8          	state;      /**> task state                                 */
     U8          	priv;       /**> = 0 unprivileged, =1 privileged            */
+    U16             u_stack_size;       /**> user stack size in bytes           */
     void*			u_stack_lo; /**> low addr of user stack returned from alloc */
 } TCB;
 
