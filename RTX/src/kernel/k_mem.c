@@ -117,7 +117,7 @@ U32* k_alloc_p_stack(task_t tid)
 	U8 *ptr = k_mem_alloc_internals(size, (task_t) 0); // set owner to kernel
 	g_tcbs[tid].u_stack_lo = ptr;
 	if(ptr == NULL) return NULL;
-	return (U32 *)((U32)(ptr + size - 1) & ~(0x3)); // return hi addr
+	return (U32 *)((U32)(ptr + size) & ~(0x7)); // return hi addr
 //    return g_p_stacks[tid+1];
 }
 
@@ -159,7 +159,7 @@ void* k_mem_alloc_internals(size_t size, task_t owner){
 
     // change to 8 byte aligned
     // size = (size + 7) & ~7;
-    size = (size + 3) & ~3;
+    size = (size + 7) & ~7;
     // size = size + 4 - (size & 0x3)
     unsigned int find_size = size + sizeof(header_t);
     node_t *curr_node = free_head;
@@ -197,7 +197,7 @@ void* k_mem_alloc(size_t size) {
 }
 
 int k_mem_dealloc_internals(void *ptr, task_t owner){
-    if ((ptr == NULL) || ((unsigned int)ptr < (unsigned int)head + sizeof(header_t)) || ((unsigned int)ptr & 0x3) || ((unsigned int)ptr > RAM_END) ){
+    if ((ptr == NULL) || ((unsigned int)ptr < (unsigned int)head + sizeof(header_t)) || ((unsigned int)ptr & 0x7) || ((unsigned int)ptr > RAM_END) ){
         return RTX_ERR;
     }
 

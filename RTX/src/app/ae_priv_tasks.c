@@ -205,6 +205,15 @@ void ktask1(void){
 }
 #endif
 
+#if TEST == 4
+void ktask1(void){
+	printf("%u ", k_tsk_get_tid());
+	k_tsk_yield();
+	printf("%u ", k_tsk_get_tid());
+  k_tsk_exit();
+}
+#endif
+
 /*
  *===========================================================================
  *                             END OF FILE

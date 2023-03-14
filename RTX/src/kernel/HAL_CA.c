@@ -276,7 +276,7 @@ void c_IRQ_Handler(void)
 	// Make sure to call line 246 before context switching
 	if (switch_flag == 1)
 	{
-		k_tsk_run_new();
+		//k_tsk_run_new();
 	}
 }
 

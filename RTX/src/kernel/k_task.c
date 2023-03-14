@@ -430,7 +430,7 @@ int k_tsk_run_new(void)
  *****************************************************************************/
 int k_tsk_yield(void)
 {
-	if (gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0){
+	if (sched_peak()->prio == NULL || (gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0)){
 		return RTX_OK;
 	}
 //    TCB *p_potential_new_task_to_run = scheduler();

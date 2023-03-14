@@ -77,7 +77,7 @@
 #define TID_NULL            0       /* pre-defined Task ID for null task */
 #define TID_KCD             159     /* pre-defined Task ID for KCD task */
 #define TID_UART_IRQ        0xFF    /* reserved TID for UART IRQ handler which is not a task */
-#define MAX_TASKS           160     /* maximum number of tasks in the system */
+#define MAX_TASKS           1600     /* maximum number of tasks in the system */
 #define K_STACK_SIZE        0x200   /* task kernel stack size in bytes */
 #define U_STACK_SIZE        0x200   /* task user space stack size in bytes */
 
