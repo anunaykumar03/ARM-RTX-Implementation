@@ -214,6 +214,54 @@ void ktask1(void){
 }
 #endif
 
+#if TEST == 5
+//Set priority to its current priority and make sure that it gets added to the back of the queue
+void ktask1(void){ 
+	RTX_TASK_INFO info;
+	k_tsk_get_info(k_tsk_get_tid(), &info)
+	k_tsk_set_prio(info.tid, info.prio);
+	//should print the tids in reverse!
+	printf("%u ", info.tid);
+	k_tsk_exit();
+}
+#endif
+
+#if TEST == 6
+void utask3(void){
+	printf("7 ");
+	tsk_exit();
+}
+
+void utask2(void){
+	printf("4 ");
+	if(tsk_create(&utid[0],utask3, 100, 0x200) != RTX_OK)
+	  printf("[utask1] FAILED to create user task.\r\n");
+	printf("5 ");
+
+	tsk_exit();
+}
+
+void utask1(void){
+	printf("2 ");
+	if(tsk_create(&utid[0],utask2, 75, 0x200) != RTX_OK)
+	  printf("[utask1] FAILED to create user task.\r\n");
+	printf("3 ");
+
+	tsk_exit();
+}
+// Test priority change of k_task_create
+void ktask1(void){
+	//create user task that is higher priority, should imediately start running that task (utask1)
+	//Inside the user task that just ran, create another user task with same priority, this should be ran after (utask2)
+	//Then create a task with same priority as the original ktask1, this task should run after the ktask finishes (utask3)
+	printf("1 ");
+	if(k_tsk_create(&utid[0],utask1, 75, 0x200) != RTX_OK)
+	  printf("[ktask1] FAILED to create user task.\r\n");
+
+	printf("6 ");
+	k_tsk_exit();
+}
+#endif
 /*
  *===========================================================================
  *                             END OF FILE
