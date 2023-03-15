@@ -50,7 +50,7 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 1
+#define TEST 7
 
 #if TEST == 1
 	extern task_t utid[3];
@@ -65,20 +65,37 @@ extern task_t ktid3;
 	#define BOOT_TASKS 1
 #endif
 
-#if TEST == 4
+#if TEST == 4 // be sure to increase MAX_TASKS to at least 256
 	#define BOOT_TASKS 255
 	// ensure k_task_info is correct
 	// create a bunch of kernel tasks
 		// ensure return values are correct with err and null (out of mem)
 		// invalid priorities
 		// task or task_entry is null
+	// invalid inputs
 	// create a bunch of user tasks
 	// create a bunch of kernel tasks that create a bunch of user tasks
 	// create user task inside user task inside user task
-	// check all yield conditions -- esp with putting task at back of list for same priority
 	// check all err conditions
 
 #endif
+
+#if TEST == 5 //Priotity Change (II), set own prio conditions
+	#define BOOT_TASKS 5
+#endif
+
+#if TEST == 6 //task creation yield conditions
+	#define BOOT_TASKS 1
+#endif
+
+#if TEST == 7 // priority change I and II
+	#define BOOT_TASKS 2
+#endif
+
+#if TEST == 8 // yield
+	#define BOOT_TASKS 1
+#endif
+
 
 /*
  *===========================================================================

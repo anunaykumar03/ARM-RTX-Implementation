@@ -229,11 +229,14 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     }
 
     // initialize TID number queue
-    for (int i = num_tasks; i < MAX_TASKS; i++){
-        U_TID_Q[i-1]=i;
+    for (int i = num_tasks+1; i < MAX_TASKS; i++){
+        U_TID_Q[i] = i;
+        // initialize all invalid TCBs to dormant
+        g_tcbs[i].state = DORMANT;
     }
-    U_TID_head = num_tasks;
+    U_TID_head = num_tasks+1;
     U_TID_tail = 0;
+
 
     return RTX_OK;
 }
@@ -550,7 +553,11 @@ void k_tsk_exit(void)
 int k_tsk_set_prio(task_t task_id, U8 prio) 
 {
 	//TODO: check that task_id is valid
-    if (prio == 255 || prio == 0) return RTX_ERR;
+    if (prio == 255 || prio == 0 || task_id == 0 || task_id >= MAX_TASKS) return RTX_ERR;
+
+    if (gp_current_task->priv == 0 && g_tcbs[task_id].priv == 1) return RTX_ERR;
+
+    if (g_tcbs[task_id].state == DORMANT) return RTX_ERR;
 
     if (gp_current_task->tid == task_id){
         gp_current_task->prio = prio;

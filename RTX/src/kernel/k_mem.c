@@ -117,8 +117,7 @@ U32* k_alloc_p_stack(task_t tid)
 	U8 *ptr = k_mem_alloc_internals(size, (task_t) 0); // set owner to kernel
 	g_tcbs[tid].u_stack_lo = ptr;
 	if(ptr == NULL) return NULL;
-	return (U32 *)((U32)(ptr + size) & ~(0x7)); // return hi addr
-//    return g_p_stacks[tid+1];
+	return (U32 *)((U32)(ptr + size)); // return hi addr
 }
 
 int k_dealloc_p_stack(task_t tid)

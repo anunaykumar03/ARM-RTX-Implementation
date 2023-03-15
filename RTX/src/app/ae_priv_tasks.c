@@ -217,16 +217,20 @@ void ktask1(void){
 #if TEST == 5
 //Set priority to its current priority and make sure that it gets added to the back of the queue
 void ktask1(void){ 
+	// should print 1234512345
 	RTX_TASK_INFO info;
-	k_tsk_get_info(k_tsk_get_tid(), &info)
+	k_tsk_get_info(k_tsk_get_tid(), &info);
+	printf("%u %u\n", info.tid, info.prio);
 	k_tsk_set_prio(info.tid, info.prio);
-	//should print the tids in reverse!
-	printf("%u ", info.tid);
+	printf("%u %u\n", info.tid, info.prio);
 	k_tsk_exit();
 }
 #endif
 
 #if TEST == 6
+
+U8 utid[3];
+
 void utask3(void){
 	printf("7 ");
 	tsk_exit();
@@ -234,7 +238,7 @@ void utask3(void){
 
 void utask2(void){
 	printf("4 ");
-	if(tsk_create(&utid[0],utask3, 100, 0x200) != RTX_OK)
+	if(tsk_create(&utid[2],utask3, 125, 0x200) != RTX_OK)
 	  printf("[utask1] FAILED to create user task.\r\n");
 	printf("5 ");
 
@@ -243,7 +247,7 @@ void utask2(void){
 
 void utask1(void){
 	printf("2 ");
-	if(tsk_create(&utid[0],utask2, 75, 0x200) != RTX_OK)
+	if(tsk_create(&utid[1],utask2, 75, 0x200) != RTX_OK)
 	  printf("[utask1] FAILED to create user task.\r\n");
 	printf("3 ");
 
@@ -251,7 +255,7 @@ void utask1(void){
 }
 // Test priority change of k_task_create
 void ktask1(void){
-	//create user task that is higher priority, should imediately start running that task (utask1)
+	//create user task that is higher priority, should immediately start running that task (utask1)
 	//Inside the user task that just ran, create another user task with same priority, this should be ran after (utask2)
 	//Then create a task with same priority as the original ktask1, this task should run after the ktask finishes (utask3)
 	printf("1 ");
@@ -259,6 +263,110 @@ void ktask1(void){
 	  printf("[ktask1] FAILED to create user task.\r\n");
 
 	printf("6 ");
+	k_tsk_exit();
+}
+#endif
+
+#if TEST == 7
+task_t utid[2];
+
+void utask1(void) {
+	printf("4");
+	if (tsk_set_prio(k_tsk_get_tid(), 253) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	if (tsk_set_prio(1, 100) != RTX_ERR){
+		printf("FAILED should not have set prio\n");
+	}
+	tsk_exit();
+}
+
+void utask2(void) {
+	printf("7");
+	if (tsk_set_prio(k_tsk_get_tid(), 50) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("8");
+	if (tsk_set_prio(k_tsk_get_tid(), 250) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("10");
+	if (tsk_set_prio(k_tsk_get_tid(), 252) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("12");
+	tsk_exit();
+}
+
+void ktask1(void){ // 125
+	RTX_TASK_INFO info;
+
+	printf("1");
+	if (k_tsk_set_prio(k_tsk_get_tid(), 100) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("2");
+	if (k_tsk_set_prio(k_tsk_get_tid(), 0) != RTX_ERR){
+		printf("FAILED should not have set prio\n");
+	}
+	if (k_tsk_set_prio(k_tsk_get_tid(), 255) != RTX_ERR){
+		printf("FAILED should not have set prio\n");
+	}
+	k_tsk_get_info(k_tsk_get_tid(), &info);
+	if (info.prio != 100){
+		printf("FAILED prio incorrect\n");
+	}
+	if (k_tsk_create(&utid[0], utask1, 100, 0x200) != RTX_OK){ // should not preempt
+		printf("FAILED to set prio\n");
+	}
+	printf("3");
+	if (k_tsk_set_prio(k_tsk_get_tid(), 254) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("14");
+	k_tsk_get_info(utid[0], &info);
+	if (info.state != DORMANT){
+		printf("FAILED state info incorrect\n");
+	}
+	if (k_tsk_set_prio(utid[0], 254) != RTX_ERR){ // dormant task
+		printf("FAILED should not have set prio\n");
+	}
+	k_tsk_get_info(utid[1], &info);
+	if (info.state != DORMANT){
+		printf("FAILED state info incorrect\n");
+	}
+	if (k_tsk_set_prio(utid[1], 254) != RTX_ERR){ // dormant task
+		printf("FAILED should not have set prio\n");
+	}
+	k_tsk_get_info(2, &info);
+	if (info.state != DORMANT){
+		printf("FAILED state info incorrect\n");
+	}
+	if (k_tsk_set_prio(2, 254) != RTX_ERR){ // dormant task
+		printf("FAILED should not have set prio\n");
+	}
+	printf("15");
+	k_tsk_exit();
+}
+
+void ktask2(void){ // 200
+	printf("5");
+	if (k_tsk_set_prio(k_tsk_get_tid(), 101) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("6");
+	if (k_tsk_create(&utid[1], utask2, 100, 0x200) != RTX_OK){ // should preempt
+		printf("FAILED to create\n");
+	}
+	printf("9");
+	if (k_tsk_set_prio(k_tsk_get_tid(), 251) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("11");
+	if (k_tsk_set_prio(utid[1], 2) != RTX_OK){
+		printf("FAILED to set prio\n");
+	}
+	printf("13");
 	k_tsk_exit();
 }
 #endif

@@ -122,6 +122,34 @@ void ae_set_task_info(RTX_TASK_INFO *tasks, int num_tasks) {
 		tasks[i].k_stack_size = 0x200;
 	}
 #endif
+
+#if TEST == 5
+	for (int i = 0; i < num_tasks; i++){
+	  	tasks[i].prio = 125;
+		tasks[i].priv = 1;
+		tasks[i].ptask = &ktask1;
+		tasks[i].k_stack_size = 0x200;
+	}
+#endif
+
+#if TEST == 6
+	  	tasks[0].prio = 125;
+		tasks[0].priv = 1;
+		tasks[0].ptask = &ktask1;
+		tasks[0].k_stack_size = 0x200;
+#endif
+
+#if TEST == 7
+		tasks[0].prio = 125;
+		tasks[0].priv = 1;
+		tasks[0].ptask = &ktask1;
+		tasks[0].k_stack_size = (0x200);
+
+	  	tasks[1].prio = 200;
+		tasks[1].priv = 1;
+		tasks[1].ptask = &ktask2;
+		tasks[1].k_stack_size = (0x200);
+#endif
 }
 
 /*
