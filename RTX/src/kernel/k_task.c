@@ -169,17 +169,15 @@ The memory map of the OS image may look like the following:
 TCB *scheduler(void)
 {
 	// modify sched_remove() to pop instead (returns what it removes)
+	if (sched_peak()->prio == NULL || ((gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0) && gp_current_task->state != DORMANT)){
+		return gp_current_task;
+	}
 	TCB * p_new_task = sched_peak();
 	sched_remove(p_new_task->tid);
 	if (gp_current_task->state != DORMANT){
 		sched_insert(gp_current_task);
 	}
 	return p_new_task;
-
-    //return sched_peak();
-//    task_t tid = gp_current_task->tid;
-//    return &g_tcbs[(++tid)%g_num_active_tasks];
-
 }
 
 
@@ -433,6 +431,7 @@ int k_tsk_yield(void)
 	if (sched_peak()->prio == NULL || (gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0)){
 		return RTX_OK;
 	}
+
 //    TCB *p_potential_new_task_to_run = scheduler();
 //
 //    if (p_potential_new_task_to_run == NULL || (gp_current_task->prio < p_potential_new_task_to_run->prio && gp_current_task->prio != 0)){
