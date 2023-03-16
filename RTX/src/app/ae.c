@@ -186,6 +186,13 @@ tasks[0].priv = 1;
 tasks[0].ptask = &ktask1;
 tasks[0].k_stack_size = 0x200;
 #endif
+
+#if TEST == 11
+tasks[0].prio = 1;
+tasks[0].priv = 1;
+tasks[0].ptask = &ktask1;
+tasks[0].k_stack_size = 0x200;
+#endif
 }
 /*
  *===========================================================================

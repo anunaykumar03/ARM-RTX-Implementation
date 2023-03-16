@@ -120,6 +120,8 @@ extern volatile int counter;
 void* my_memory;
 char ownership_failed;
 void ktask1(void){
+	unsigned int start = timer_get_current_val(2);
+
 	ownership_failed = 0;
 	task_t utid1;
 	task_t utids[MAX_TASKS-4];
@@ -141,7 +143,7 @@ void ktask1(void){
 	if(my_memory == NULL)
 		printf("Failed to allocate memory!\r\n");
 
-	printf("Trying to exhaust memory, this may take a while... \r\n");
+//	printf("Trying to exhaust memory, this may take a while... \r\n");
 
 	int size = 0x3FFFFFFF;
 
@@ -194,11 +196,14 @@ void ktask1(void){
 	//check_heap();
 
 
-	printf("============================================\r\n");
-	printf("=============Final test results=============\r\n");
-	printf("============================================\r\n");
-	printf("%d out of 8 tests passed!\r\n", 8-eflag);
-	printf("%d out of 1 tests passed!\r\n", 1-ownership_failed);
+//	printf("============================================\r\n");
+//	printf("=============Final test results=============\r\n");
+//	printf("============================================\r\n");
+//	printf("%d out of 8 tests passed!\r\n", 8-eflag);
+//	printf("%d out of 1 tests passed!\r\n", 1-ownership_failed);
+
+	unsigned int end = timer_get_current_val(2);
+	printf("This took %u us\r\n", start - end);
 
     k_tsk_exit();
 
@@ -607,6 +612,81 @@ void ktask1(void){
     }
     printf("3 out of 3 tests succeeded ==============\n");
     k_tsk_exit();
+}
+#endif
+
+#if TEST == 11
+task_t utid[10];\
+void * ptr;
+
+void utask2(void){
+	printf("3 ");
+
+	if (tsk_set_prio(utid[3], 3) != RTX_OK){
+		printf("FAILED");
+	}
+//	printf("4 ");
+//	tsk_yield();
+	printf("4 ");
+	tsk_exit();
+}
+
+void utask3(void){
+	printf("5 ");
+	if (mem_dealloc(ptr) != RTX_ERR){
+		printf("FAILED mem2");
+	}
+	tsk_yield();
+//	if (tsk_set_prio(tsk_get_tid(), 3) != RTX_OK){
+//		printf("FAILED");
+//	}
+	printf("6 ");
+	tsk_exit();
+}
+
+void utask4(void){
+	printf("7 ");
+	if (mem_dealloc(ptr) != RTX_ERR){
+			printf("FAILED mem2");
+		}
+	if (tsk_set_prio(tsk_get_tid(), 2) != RTX_OK){
+		printf("FAILED");
+	}
+	printf("8 ");
+	tsk_exit();
+}
+
+void utask5(void){
+	printf("9 ");
+	ptr = mem_alloc(100);
+	if (ptr == NULL) printf("FAILED mem1");
+	if (tsk_set_prio(utid[2], 1) != RTX_OK){
+		printf("FAILED");
+	}
+	tsk_yield();
+	if (mem_dealloc(ptr) == RTX_ERR){
+			printf("FAILED mem2");
+		}
+	printf("10 ");
+	tsk_exit();
+}
+
+void ktask1(void){
+	printf("1 ");
+	if (k_tsk_create(&utid[0], utask2, 2, 0x200) != RTX_OK){
+		printf("FAILED 1");
+	}
+	if (k_tsk_create(&utid[1], utask3, 3, 0x200) != RTX_OK){
+		printf("FAILED 1");
+	}
+	if (k_tsk_create(&utid[2], utask4, 4, 0x200) != RTX_OK){
+		printf("FAILED 1");
+	}
+	if (k_tsk_create(&utid[3], utask5, 5, 0x200) != RTX_OK){
+		printf("FAILED 1");
+	}
+	printf("2 ");
+	k_tsk_exit();
 }
 #endif
 

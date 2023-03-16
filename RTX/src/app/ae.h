@@ -50,7 +50,7 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 10
+#define TEST 11
 
 #if TEST == 1
 	extern task_t utid[3];
@@ -93,6 +93,9 @@ extern task_t ktid3;
 #define BOOT_TASKS 1
 #endif
 
+#if TEST == 11
+#define BOOT_TASKS 1
+#endif
 /*
  *===========================================================================
  *                            FUNCTION PROTOTYPES
