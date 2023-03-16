@@ -606,6 +606,7 @@ void ktask1(void){
         }
     }
     printf("3 out of 3 tests succeeded ==============\n");
+    k_tsk_exit();
 }
 #endif
 

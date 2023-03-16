@@ -67,17 +67,6 @@ extern task_t ktid3;
 
 #if TEST == 4
 	#define BOOT_TASKS MAX_TASKS-1
-	// ensure k_task_info is correct
-	// create a bunch of kernel tasks
-		// ensure return values are correct with err and null (out of mem)
-		// invalid priorities
-		// task or task_entry is null
-	// invalid inputs
-	// create a bunch of user tasks
-	// create a bunch of kernel tasks that create a bunch of user tasks
-	// create user task inside user task inside user task
-	// check all err conditions
-
 #endif
 
 #if TEST == 5 //Priotity Change (II), set own prio conditions

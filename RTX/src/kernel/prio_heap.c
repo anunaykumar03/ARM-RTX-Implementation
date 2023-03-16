@@ -2,7 +2,7 @@
 #include "k_inc.h"
 #include "prio_heap.h"
 
-unsigned int sched_heap[MAX_TASKS+1];
+unsigned int sched_heap[MAX_TASKS+2];
 unsigned int heap_size = 0;
 unsigned int countL = 0;
 unsigned int countH = 0;
@@ -66,8 +66,8 @@ volatile int index_b1;
 int has_higher_prio(unsigned int index_a, unsigned int index_b){
 	index_a1 = index_a;
 	index_b1 = index_b;
-	if(index_a1 >= MAX_TASKS  || index_b1 >= MAX_TASKS){
-		while(index_a1 >= MAX_TASKS  || index_b1 >= MAX_TASKS){};
+	if(index_a1 > MAX_TASKS  || index_b1 > MAX_TASKS){
+		while(index_a1 > MAX_TASKS  || index_b1 > MAX_TASKS){};
 	}
 
     if(g_tcbs[sched_heap[index_a]].prio == 0) return 0;
