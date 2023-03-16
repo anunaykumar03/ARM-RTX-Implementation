@@ -158,7 +158,8 @@ void* k_mem_alloc_internals(size_t size, task_t owner){
 
     // change to 8 byte aligned
     // size = (size + 7) & ~7;
-    size = (size + 7) & ~7;
+    if (size == 0) return NULL;
+    size = (size + 7) & ~0x7;
     // size = size + 4 - (size & 0x3)
     unsigned int find_size = size + sizeof(header_t);
     node_t *curr_node = free_head;
