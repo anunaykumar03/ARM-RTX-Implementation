@@ -32,6 +32,13 @@
 void utask1(void);
 void utask2(void);
 void utask3(void);
+void utask4(void);
+void utask5(void);
+void utask6(void);
+void utask7(void);
+void utask8(void);
+void utask10(void);
+
 
 
 #endif // ! USR_TASK_H_

@@ -65,8 +65,8 @@ extern task_t ktid3;
 	#define BOOT_TASKS 1
 #endif
 
-#if TEST == 4 // be sure to increase MAX_TASKS to at least 256
-	#define BOOT_TASKS 255
+#if TEST == 4
+	#define BOOT_TASKS MAX_TASKS-1
 	// ensure k_task_info is correct
 	// create a bunch of kernel tasks
 		// ensure return values are correct with err and null (out of mem)

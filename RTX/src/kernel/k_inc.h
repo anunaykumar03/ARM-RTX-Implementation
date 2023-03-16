@@ -72,8 +72,12 @@ typedef struct tcb {
     U32             heap_idx;   /**> Index in scheduler heap                    */
     U8          	state;      /**> task state                                 */
     U8          	priv;       /**> = 0 unprivileged, =1 privileged            */
+    U16             k_stack_size;
     U16             u_stack_size;       /**> user stack size in bytes           */
-    void*			u_stack_lo; /**> low addr of user stack returned from alloc */
+    U32             k_stack_hi;         /**> kernel stack base (high addr.)     */
+    U32             u_stack_hi;         /**> user stack base addr. (high addr.) */
+    void*			u_stack_lo;		 /**> low addr of user stack returned from alloc */
+    void            (*ptask)();         /**> task entry address                 */
 } TCB;
 
 /*

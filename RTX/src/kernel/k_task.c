@@ -214,6 +214,11 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     p_tcb->state    = RUNNING;
     p_tcb->countL	= 0;
     p_tcb->countH 	= 0;
+    p_tcb->u_stack_hi = 0;
+    p_tcb->k_stack_hi = 0;
+    p_tcb->u_stack_size = 0;
+    p_tcb->k_stack_size = 0;
+    p_tcb->ptask = NULL;
     g_num_active_tasks++;
     gp_current_task = p_tcb;
 
@@ -274,6 +279,9 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     p_tcb->priv = p_taskinfo->priv;
     p_tcb->countL = 0;
     p_tcb->countH = 0;
+    p_tcb->ptask = p_taskinfo->ptask;
+    U32 temp_size = p_tcb->u_stack_size;
+    p_tcb->u_stack_size = 0;
 
     /*---------------------------------------------------------------
      *  Step1: allocate kernel stack for the task
@@ -282,8 +290,8 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
 
     ///////sp = g_k_stacks[tid] + (K_STACK_SIZE >> 2) ;
     sp = k_alloc_k_stack(tid);
-    p_taskinfo->k_stack_hi = (U32)sp;
-    p_taskinfo->k_stack_size = K_STACK_SIZE;
+    p_tcb->k_stack_hi = (U32)sp;
+    p_tcb->k_stack_size = K_STACK_SIZE;
 
     // 8B stack alignment adjustment
     if ((U32)sp & 0x04) {   // if sp not 8B aligned, then it must be 4B aligned
@@ -314,9 +322,11 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
         //********************************************************************//
         //*** allocate user stack from the user space, not implemented yet ***//
         //********************************************************************//
+        p_tcb->u_stack_size = temp_size;
 		void *p_stack = k_alloc_p_stack(tid);
 		if (p_stack == NULL) return RTX_ERR;
         *(--sp) = (U32) p_stack;
+        p_tcb->u_stack_hi = (U32)p_stack;
 
         // uR12, uR11, ..., uR0
         for ( int j = 0; j < 13; j++ ) {
@@ -431,7 +441,7 @@ int k_tsk_run_new(void)
  *****************************************************************************/
 int k_tsk_yield(void)
 {
-	if (sched_peak()->prio == NULL || (gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0)){
+	if (sched_peak() == NULL || (gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0)){
 		return RTX_OK;
 	}
 
@@ -466,7 +476,8 @@ int k_tsk_yield(void)
 
 int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size)
 {
-    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS-1 || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT || (stack_size & 0x7) != 0) return RTX_ERR;
+    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT || (stack_size & 0x7) != 0)
+    	return RTX_ERR;
     // invalid state of RTX??????
 
 //    // alloc stack for user task
@@ -477,7 +488,7 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
     // assign task ID
     *task = U_TID_Q[U_TID_head];
     task_t tid = *task;
-    U_TID_head = ++U_TID_head % (MAX_TASKS-1);
+    U_TID_head = ++U_TID_head % MAX_TASKS;
     ++g_num_active_tasks;
 
     // assign the task info // we don't need all of these
@@ -535,7 +546,7 @@ void k_tsk_exit(void)
 //    }
     // set tid number to free
     U_TID_Q[U_TID_tail] = gp_current_task->tid;
-    U_TID_tail = ++U_TID_tail % (MAX_TASKS-1);
+    U_TID_tail = ++U_TID_tail % MAX_TASKS;
     --g_num_active_tasks;
 
     // then run the new task
@@ -571,15 +582,10 @@ int k_tsk_set_prio(task_t task_id, U8 prio)
 
     // else task_id != current task
     g_tcbs[task_id].prio = prio;
-    if (prio < gp_current_task->prio){
-//	    switch_task(task_id, 0, 1);
-    	k_tsk_run_new();
-        // preempt, switch to new task
-    }
-    else {
-        sched_remove(task_id);
-        sched_insert(&g_tcbs[task_id]);
-    }
+    sched_remove(task_id);
+    sched_insert(&g_tcbs[task_id]);
+    k_tsk_run_new();
+
 
 #ifdef DEBUG_0
     printf("k_tsk_set_prio: entering...\n\r");
@@ -619,14 +625,14 @@ int k_tsk_get_info(task_t task_id, RTX_TASK_INFO *buffer)
     task_info->prio = g_tcbs[task_id].prio;
 
     buffer->tid = task_id;
-    buffer->prio = task_info->prio;
-    buffer->state = task_info->state;
-    buffer->priv = task_info->priv;
-    buffer->ptask = task_info->ptask;
-    buffer->k_stack_size = task_info->k_stack_size;
-    buffer->u_stack_size = task_info->u_stack_size;
-    buffer->k_stack_hi = task_info->k_stack_hi;
-    buffer->u_stack_hi = task_info->u_stack_hi;
+    buffer->prio = g_tcbs[task_id].prio;
+    buffer->state = g_tcbs[task_id].state;
+    buffer->priv = g_tcbs[task_id].priv;
+    buffer->ptask = g_tcbs[task_id].ptask;
+    buffer->k_stack_size = g_tcbs[task_id].k_stack_size;
+    buffer->u_stack_size = g_tcbs[task_id].u_stack_size;
+    buffer->k_stack_hi = g_tcbs[task_id].k_stack_hi;
+    buffer->u_stack_hi = g_tcbs[task_id].u_stack_hi;
 
     return RTX_OK;     
 }
