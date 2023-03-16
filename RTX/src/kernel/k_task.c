@@ -514,7 +514,7 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
     g_tcbs[tid].u_stack_size = stack_size;
     if (k_tsk_create_new(task_info, &g_tcbs[tid], tid) == RTX_ERR){
 	    U_TID_Q[U_TID_tail] = tid;
-	    U_TID_tail = ++U_TID_tail % (MAX_TASKS-1);
+	    U_TID_tail = ++U_TID_tail % (MAX_TASKS);
 	    --g_num_active_tasks;
 	    return RTX_ERR;
     }
