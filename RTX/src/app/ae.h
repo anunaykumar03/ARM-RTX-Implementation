@@ -50,7 +50,7 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 7
+#define TEST 10
 
 #if TEST == 1
 	extern task_t utid[3];
@@ -93,9 +93,16 @@ extern task_t ktid3;
 #endif
 
 #if TEST == 8 // yield
-	#define BOOT_TASKS 1
+	#define BOOT_TASKS 3
 #endif
 
+#if TEST == 9 // create
+	#define BOOT_TASKS 2
+#endif
+
+#if TEST == 10 // TIDs, ensure task_t can support MAX_TASKS
+#define BOOT_TASKS 1
+#endif
 
 /*
  *===========================================================================

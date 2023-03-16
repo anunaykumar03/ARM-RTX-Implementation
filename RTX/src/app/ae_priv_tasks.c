@@ -370,6 +370,237 @@ void ktask2(void){ // 200
 	k_tsk_exit();
 }
 #endif
+
+#if TEST == 8
+U8 utid[10];
+void ktask1(void){
+    printf("SUB TEST 1!\n");
+    //case 1: yield when queue is empty (we are already running :)), 
+    printf("1 ");
+    k_tsk_yield();
+    printf("2 ");
+    
+    //case 3: yield when there are multiple things in queue, one of them is same priority
+    if(k_tsk_create(&utid[0], &utask1, 100, 0x200) != RTX_OK){
+        printf("ktask1 task creation failed!\n");
+        k_tsk_exit();
+        return;
+    }
+
+    printf("3 ");
+
+    if(k_tsk_create(&utid[1], &utask2, 115, 0x200) != RTX_OK){
+        printf("ktask1 task creation failed!\n");
+        k_tsk_exit();
+        return;
+    }
+
+    printf("4 ");
+
+    if(k_tsk_create(&utid[2], &utask3, 115, 0x200) != RTX_OK){
+        printf("ktask1 task creation failed!\n");
+        k_tsk_exit();
+        return;
+    }
+
+    printf("5 ");
+    k_tsk_yield();
+    printf("7 ");
+    k_tsk_yield(); 
+    printf("9 ");
+
+    //case 4: yield when there are multiple things in queue, all of them are lower priority, should continue running
+    k_tsk_yield();
+    printf("10 ");
+}
+
+void ktask2(void){
+    printf("SUB TEST 2!\n");
+    //case 2: multiple things in queue of same priority, a few back to back yields
+    //spawn 4 tasks that each call yield 4 times
+    for(int i = 0;i < 4;i++){
+        if(k_tsk_create(&utid[i], &utask4, 135, 0x200) != RTX_OK){
+            printf("ktask2 task creation failed!\n");
+            k_tsk_exit();
+            return;
+        }
+    }
+
+    printf("START ");
+}
+
+void ktask3(void){
+    printf("SUB TEST 3!\n");
+    //case 5: yield when the only other thing in the queue is of same priority, yield back and forth
+    printf("1 ");
+    if(k_tsk_create(&utid[0], &utask5, 150, 0x200) != RTX_OK){
+        printf("ktask3 task creation failed!\n");
+        k_tsk_exit();
+        return;
+    }
+    k_tsk_yield();
+    printf("3 ");
+    k_tsk_yield();
+    printf("5 ");
+    k_tsk_yield();
+    printf("7 ");
+    printf("ALL TESTS DONE\n");
+    k_tsk_exit();
+}
+#endif
+
+#if TEST == 9
+task_t utid[10];
+void ktask1(void){ // check create yields
+	printf("1");
+	RTX_TASK_INFO info;
+	k_tsk_get_info(k_tsk_get_tid(), &info);
+	if (info.priv != 1){
+		printf("FAILED incorrect privilege\n");
+	}
+	if (info.state != RUNNING){
+		printf("FAILED incorrect state\n");
+	}
+	if (info.k_stack_size != 0x200){
+		printf("FAILED incorrect k stack size\n");
+	}
+	if (info.u_stack_size != 0){
+		printf("FAILED incorrect u stack size\n");
+	}
+	if (k_tsk_create(&utid[0], utask1, 200, 0x200) != RTX_OK){
+		printf("FAILED to create task\n");
+	}
+	if (utid[0] == 0 || utid[0] == 255 || utid[0] > MAX_TASKS){
+		printf("FAILED wrong tid\n");
+	}
+	printf("2");
+	if (k_tsk_create(&utid[1], utask2, 125, 0x200) != RTX_OK){
+		printf("FAILED to create task\n");
+	}
+	printf("3");
+	if (k_tsk_create(&utid[2], utask3, 124, 0x200) != RTX_OK){
+		printf("FAILED to create task\n");
+	}
+	printf("6");
+}
+
+void ktask2(void){ // check invalid inputs
+	if (k_tsk_create(utid[0], utask10, 255, 0x200) != RTX_ERR){
+		printf("FAILED");
+	}
+	if (k_tsk_create(utid[0], utask10, 0, 0x200) != RTX_ERR){
+		printf("FAILED");
+	}
+	if (k_tsk_create(utid[0], utask10, 1, 0x100) != RTX_ERR){
+		printf("FAILED");
+	}
+	if (k_tsk_create(NULL, utask10, 1, 0x200) != RTX_ERR){
+		printf("FAILED");
+	}
+	if (k_tsk_create(utid[0], NULL, 1, 0x200) != RTX_ERR){
+		printf("FAILED");
+	}
+	if (k_tsk_create(utid[0], utask10, 1, 0xFFFF) != RTX_OK){ 
+		printf("FAILED");
+	}
+	if (k_tsk_create(utid[0], utask10, 1, 0x200) != RTX_OK){ 
+		printf("FAILED");
+	}
+}
+
+void utask10(void){
+	printf("TADA!\n");
+}
+#endif
+
+#if TEST == 10
+task_t utids[MAX_TASKS-2]; 
+task_t utid_map[MAX_TASKS];
+void ktask1(void){ 
+    //first make sure only MAX_TASK number of tasks can be run
+    for(int i = 0;i < MAX_TASKS-2;i++){
+        if(k_tsk_create(&utids[i], utask1, 110, 0x200) != RTX_OK){
+            printf("task creation failed, ending test\n");
+            k_tsk_exit();
+            return;
+        }
+    }
+
+    if(k_tsk_create(&utids[i], utask1, 110, 0x200) != RTX_ERR){
+        printf("task creation succeeded when it should have failed, ending test\n");
+        k_tsk_exit();
+        return;
+    }
+
+    printf("1 out of 3 tests succeeded ==============\n");
+
+    task_t kernel_tid = k_tsk_get_tid();
+     //make sure that there are no TID duplicates
+    for(int i = 0;i < MAX_TASKS;i++){
+        utid_map[i] = 0;
+    }
+    utid_map[0] = 1;
+    utid_map[kernel_tid] = 1;
+    
+    //if for loop runs without fail, then we did not perform double alloc
+    //further, all TIDs should be alloced by pigeon hole :)
+    for(int i = 0;i < MAX_TASKS-2;i++){
+        if(utid_map[utids[i]] == 1){
+            printf("FAIL, double TID alloced, ending test\n");
+            k_tsk_exit();
+            return;
+        }
+        utid_map[utids[i]] = 1;
+    }
+    printf("2 out of 3 tests succeeded ==============\n");
+
+
+    //now allow 20 tests to run, record their TIDS, then create 20 more tests, these should be the TIDS that were deallocated
+    //Do this 20 times, make sure double TID is never assigned!
+    //Use "linear congruential generator" for random number generation.
+    int gen_index = 1;
+    int gen_mod = MAX_TASKS - 2; //large prime number
+    int gen_a = 7; //multiplier for the random number generator
+    int gen_c = 1; //adder
+    int NUM_TEST = 20;
+    task_t chosen_indices[NUM_TEST];
+
+    printf("Runnng Test 3.... This may take a while\n");
+    //50 iterations of the test
+    for(int i = 0;i < 50;i++){
+        //allow the 20 tests to run;
+        for(int j = 0;j < 20;j++){
+            gen_index = a*(gen_index + c) % gen_mod;
+            if(utid_map[utids[gen_index]] == 1){
+                utid_map[utids[gen_index]] = 0;
+                chosen_indices[j] = gen_index;
+                k_tsk_set_prio(utids[gen_index], 99); //allow it to run and finish
+            } else {
+                j--;
+            }
+        }
+
+        //create 20 more tasks, add them to the available utids and ensure they were taken
+        for(int j = 0;j < 20;j++){
+            if(k_tsk_create(&utids[chosen_indices[j]], utask1, 110, 0x200) != RTX_OK){
+                printf("task creation failed, ending test\n");
+                k_tsk_exit();
+                return;
+            }
+
+            if(utid_map[utids[chosen_indices[j]]] == 1){
+                printf("assigned double tid, ending test \n");
+                k_tsk_exit();
+                return;
+            } else {
+                utid_map[utids[chosen_indices[j]]] = 1;
+            }
+        }
+    }
+    printf("3 out of 3 tests succeeded ==============\n");
+}
+#endif
+
 /*
  *===========================================================================
  *                             END OF FILE

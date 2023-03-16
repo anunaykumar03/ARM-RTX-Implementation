@@ -466,7 +466,7 @@ int k_tsk_yield(void)
 
 int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size)
 {
-    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS-1 || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT) return RTX_ERR;
+    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS-1 || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT || (stack_size & 0x7) != 0) return RTX_ERR;
     // invalid state of RTX??????
 
 //    // alloc stack for user task
@@ -598,15 +598,18 @@ int k_tsk_get_info(task_t task_id, RTX_TASK_INFO *buffer)
         return RTX_ERR;
     }
     // check for invalid task ID
-    for (int i = U_TID_head; i != U_TID_head; ++i ){
-        if(i == MAX_TASKS-1){
-            i = 0;
-        }
-
-        if (U_TID_Q[i] == task_id){
-            return RTX_ERR;
-        }
+    if (g_tcbs[task_id].state == DORMANT){
+        return RTX_ERR;
     }
+    // for (int i = U_TID_head; i != U_TID_head; ++i ){
+    //     if(i == MAX_TASKS-1){
+    //         i = 0;
+    //     }
+
+    //     if (U_TID_Q[i] == task_id){
+    //         return RTX_ERR;
+    //     }
+    // }
 
     /* The code fills the buffer with some fake task information. 
        You should fill the buffer with correct information    */

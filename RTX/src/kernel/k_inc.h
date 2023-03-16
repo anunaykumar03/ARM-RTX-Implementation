@@ -65,7 +65,7 @@
 typedef struct tcb {
 //	U32				temp;
     U32*        	ksp;        /**> ksp of the task, TCB_KSP_OFFSET = 4        */
-    U8          	tid;        /**> task id                                    */
+    task_t          tid;        /**> task id                                    */
     U8          	prio;       /**> Execution priority                         */
     U32          	countL;     /**> Entry count                                */
     U32          	countH;     /**> Entry count                                */

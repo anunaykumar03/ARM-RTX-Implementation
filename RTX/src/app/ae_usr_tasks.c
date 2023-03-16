@@ -138,6 +138,111 @@ void utask2(void){
 }
 #endif
 
+#if TEST == 8
+void utask1(void){
+    printf("6 ");
+    tsk_yield();
+    printf("8 ");
+    tsk_exit();
+}
+
+void utask2(void){
+    printf("10 ");
+    tsk_exit();
+}
+
+void utask3(void){
+    printf("11\n");
+    printf("SUB TEST 1 FINISH\n");
+    tsk_exit();
+}
+
+void utask4(void){
+    RTX_TASK_INFO fill_struct;
+    tsk_get_info(tid, &fill_struct); //MAKE SURE THIS IS RIGHT
+    for(int i = 0;i < 4;i++){
+        printf("%u ", tid + i * 4);
+        tsk_yield();
+    }
+    tsk_exit();
+}
+
+void utask5(void){
+    printf("2 ");
+    tsk_yield();
+    printf("4 ");
+    tsk_yield();
+    printf("6 ");
+    tsk_exit();
+}
+#endif
+
+#if TEST == 9
+task_t utid[10];
+void utask1(void){
+	printf("13");
+}
+void utask2(void){
+	printf("10");
+	if (tsk_create(utid[3], utask1, 0, 0x200) != RTX_ERR){
+		printf("FAILED to create task in user task\n");
+	}
+	if (tsk_create(utid[3], utask1, 255, 0x200) != RTX_ERR){
+		printf("FAILED to create task in user task\n");
+	}
+	if (tsk_create(utid[3], utask7, 200, 0x200) != RTX_OK){
+		printf("FAILED to create task in user task\n");
+	}
+	printf("11");
+
+}
+void utask3(void){
+	printf("4");
+	if (tsk_create(utid[0], utask4, 125, 0x200) != RTX_OK){
+		printf("FAILED to create task in user task\n");
+	}
+	printf("5");
+	if (tsk_create(utid[1], utask5, 123, 0x200) != RTX_OK){
+		printf("FAILED to create task in user task\n");
+	}
+	printf("9");
+}
+void utask4(void){
+	printf("12");
+}
+void utask5(void){
+	printf("6");
+	if (tsk_create(utid[2], utask6, 123, 0x200) != RTX_OK){
+		printf("FAILED to create task in user task\n");
+	}
+	printf("7");
+}
+void utask6(void){
+	printf("8");
+}
+void utask7(void){
+	printf("14");
+	if (tsk_create(utid[4], utask8, 199, 0x200) != RTX_OK){
+		printf("FAILED to create task in user task\n");
+	}
+	printf("16");
+}
+void utask8(void){
+	printf("15");
+}
+#endif
+
+#if TEST == 10
+void utask1(void){
+    tsk_set_prio(tsk_get_tid(), 98);
+    tsk_exit();
+}
+#endif
+
+// check k_tsk_get_info stack size and hi addr, ensure we cant dealloc stack using the addr from rtx info
+// double check 8 byte alignment? ensure stack size is always multiple of 8
+// stress test
+
 /*
  *===========================================================================
  *                             END OF FILE
