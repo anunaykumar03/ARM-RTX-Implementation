@@ -124,7 +124,7 @@ void ktask1(void){
 
 	ownership_failed = 0;
 	task_t utid1;
-	task_t utids[MAX_TASKS-4];
+	static task_t utids[MAX_TASKS-4];
 	char internal_error = 0;
 	for(int i =0; i < MAX_TASKS-4; i++){
 		if(k_tsk_create(&utids[i], &utask1, 150, 0xFFF0) != RTX_OK){

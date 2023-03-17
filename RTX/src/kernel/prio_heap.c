@@ -64,18 +64,14 @@ void check_heap(){
 
 //returns 1 if a has higher prio than b
 //returns 0 if a is has lower prio than b
-volatile int index_a1;
-volatile int index_b1;
 
 int has_higher_prio(unsigned int index_a, unsigned int index_b){
-	index_a1 = index_a;
-	index_b1 = index_b;
-	if(index_a1 > MAX_TASKS  || index_b1 > MAX_TASKS){
-		while(index_a1 > MAX_TASKS  || index_b1 > MAX_TASKS){};
+	if(index_a > MAX_TASKS  || index_b > MAX_TASKS){
+		while(index_a > MAX_TASKS  || index_b > MAX_TASKS){};
 	}
 
-    if(g_tcbs[sched_heap[index_a]].prio == 0) return 0;
-    if(g_tcbs[sched_heap[index_b]].prio == 0) return 1;
+//    if(g_tcbs[sched_heap[index_a]].prio == 0) return 0;
+//    if(g_tcbs[sched_heap[index_b]].prio == 0) return 1;
     // optimize these comparisons
     if (g_tcbs[sched_heap[index_a]].prio < g_tcbs[sched_heap[index_b]].prio){
         return 1;
@@ -119,7 +115,7 @@ void up_heap(unsigned int index){
 }
 
 void down_heap(unsigned int index){
-    int smaller_child;
+    unsigned int smaller_child;
     unsigned int temp = 0;
     while((index << 1) <= heap_size){
         smaller_child = index << 1;
