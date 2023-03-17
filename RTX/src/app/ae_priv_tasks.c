@@ -140,11 +140,10 @@ void ktask1(void){
 	}
 
 	my_memory = k_mem_alloc(0xFF);
-//	printf("%d", my_memory);
 	if(my_memory == NULL)
 		printf("Failed to allocate memory\n");
 
-//	printf("Trying to exhaust memory, this may take a while... \r\n");
+	printf("Trying to exhaust memory, this may take a while... \r\n");
 
 	int size = 0x3FFFFFFF;
 
@@ -162,10 +161,6 @@ void ktask1(void){
 	}
 	internal_error = 0;
 	for(int i =0; i < MAX_TASKS-4; i++){
-//		printf("%d \n", i);
-		//if(i == 205){
-			//printf("error reached");
-		//}
 		if(k_tsk_set_prio(utids[i], 100) != RTX_OK){
 			printf("FAILED to set priority!\r\n");
 			internal_error++;
@@ -198,20 +193,18 @@ void ktask1(void){
 	temp_counter = counter;
 	if(temp_counter != MAX_TASKS-4)
 		eflag++;
-	//check_heap();
 
 
-//	printf("============================================\r\n");
-//	printf("=============Final test results=============\r\n");
-//	printf("============================================\r\n");
-//	printf("%d out of 8 tests passed!\r\n", 8-eflag);
-//	printf("%d out of 1 tests passed!\r\n", 1-ownership_failed);
+	printf("============================================\r\n");
+	printf("=============Final test results=============\r\n");
+	printf("============================================\r\n");
+	printf("%d out of 8 tests passed!\r\n", 8-eflag);
+	printf("%d out of 1 tests passed!\r\n", 1-ownership_failed);
 
 	unsigned int end = timer_get_current_val(2);
 	printf("This took %u us\r\n", start-end);
 
-    k_tsk_exit();
-
+	k_tsk_exit();
 }
 #endif
 

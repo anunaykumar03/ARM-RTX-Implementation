@@ -74,7 +74,6 @@ U32             g_num_active_tasks = 0;		// number of non-dormant tasks
 unsigned int U_TID_Q[MAX_TASKS];
 unsigned int U_TID_head;
 unsigned int U_TID_tail;
-RTX_TASK_INFO U_rtx_task_infos[MAX_TASKS];
 
 // counters for FIFO
 unsigned int counterL = 0;
@@ -140,24 +139,6 @@ The memory map of the OS image may look like the following:
  *===========================================================================
  */
 
-//void switch_task(task_t tid, U8 exit_old, U8 remove_new_from_heap){ // args: tid of task to switch to
-//        TCB *p_old_task = gp_current_task;
-//        gp_current_task = &g_tcbs[tid];
-//        gp_current_task->state = RUNNING; // change state of the to-be-switched-in  tcb
-//        p_old_task->state = DORMANT;      // change state of the to-be-switched-out tcb
-//
-//	if(remove_new_from_heap){
-//		sched_remove(tid);
-//	}
-//
-//	if(!exit_old){
-//        	p_old_task->state = READY;
-//        	sched_insert(p_old_task);
-//	}
-//
-//        k_tsk_switch(p_old_task); // switch stacks
-//}
-
 /**************************************************************************//**
  * @brief   scheduler, pick the TCB of the next to run task
  *
@@ -168,19 +149,6 @@ The memory map of the OS image may look like the following:
 
 TCB *scheduler(void)
 {
-	// modify sched_remove() to pop instead (returns what it removes)
-//	if (sched_peak() == NULL || (gp_current_task->prio < sched_peak()->prio ||
-//			(gp_current_task->prio == sched_peak()->prio && (gp_current_task->countL < sched_peak()->countL &&
-//			gp_current_task->countH <= sched_peak()->countH) || gp_current_task->countH < sched_peak()->countH)
-//			&& gp_current_task->prio != 0 && gp_current_task->state != DORMANT)){
-//		return gp_current_task;
-//	}
-//	TCB * p_new_task = sched_peak();
-//	sched_remove(p_new_task->tid);
-//	if (gp_current_task->state != DORMANT){
-//		sched_insert(gp_current_task);
-//	}
-//	return p_new_task;
 	return sched_peak();
 }
 
@@ -442,30 +410,9 @@ int k_tsk_run_new(void)
  *****************************************************************************/
 int k_tsk_yield(void)
 {
-//	if (sched_peak() == NULL || (gp_current_task->prio < sched_peak()->prio && gp_current_task->prio != 0)){
-//		return RTX_OK;
-//	}
 	sched_remove(gp_current_task->tid);
 	sched_insert(gp_current_task);
 
-//    TCB *p_potential_new_task_to_run = scheduler();
-//
-//    if (p_potential_new_task_to_run == NULL || (gp_current_task->prio < p_potential_new_task_to_run->prio && gp_current_task->prio != 0)){
-//        // keep running current task
-//        return RTX_OK;
-//    }
-//
-//    // otherwise switch to new task
-//    switch_task(p_potential_new_task_to_run->tid, 0, 1);
-//    //TCB *p_old_task = gp_current_task;
-//    //gp_current_task = p_potential_new_task_to_run;
-//    //gp_current_task->state = RUNNING;  // change state of the to-be-switched-in  tcb
-//    //p_old_task->state = READY;         // change state of the to-be-switched-out tcb
-//    //sched_pop();
-//    //sched_insert(p_old_task);
-//    //k_tsk_switch(p_old_task);          // switch stacks
-//
-//    return RTX_OK;
     return k_tsk_run_new();
 }
 
@@ -481,11 +428,6 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
     if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT || (stack_size & 0x7) != 0)
     	return RTX_ERR;
     // invalid state of RTX??????
-
-//    // alloc stack for user task
-//    // change to k_alloc_p_stack
-//    unsigned int usptr = k_mem_alloc(stack_size);
-//    if (usptr == NULL) return RTX_ERR;
     
     // assign task ID
     *task = U_TID_Q[U_TID_head];
@@ -493,28 +435,18 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
     U_TID_head = ++U_TID_head % MAX_TASKS;
     ++g_num_active_tasks;
 
-    // assign the task info // we don't need all of these
-    RTX_TASK_INFO *task_info = &(U_rtx_task_infos[*task-1]);
-    task_info->ptask = task_entry;
-//    task_info->k_stack_hi = k_alloc_k_stack(*task);
-//    task_info->k_stack_size = K_STACK_SIZE;
-//    task_info->u_stack_hi = usptr + stack_size -1;
-    task_info->u_stack_size = stack_size;
-    task_info->tid = tid;
-    task_info->prio = prio;
-    task_info->state = READY;
-    task_info->priv = 0;
+    // assign the task info
+    RTX_TASK_INFO task_info;
+    task_info.ptask = task_entry;
+    task_info.u_stack_size = stack_size;
+    task_info.tid = tid;
+    task_info.prio = prio;
+    task_info.state = READY;
+    task_info.priv = 0;
     
-    // update TCB
-//    g_tcbs[tid].ksp = task_info->k_stack_hi;
-//    g_tcbs[tid].tid = tid;
-//    g_tcbs[tid].prio = prio;
-//    g_tcbs[tid].state = READY;
-//    g_tcbs[tid].priv = 0;
-
     // set up new task
     g_tcbs[tid].u_stack_size = stack_size;
-    if (k_tsk_create_new(task_info, &g_tcbs[tid], tid) == RTX_ERR){
+    if (k_tsk_create_new(&task_info, &g_tcbs[tid], tid) == RTX_ERR){
 	    U_TID_Q[U_TID_tail] = tid;
 	    U_TID_tail = (U_TID_tail+1) % (MAX_TASKS);
 	    --g_num_active_tasks;
@@ -525,13 +457,8 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
     if (prio < gp_current_task->prio){
         // switch to new task
     	k_tsk_run_new();
-
-//	    switch_task(tid, 0, 0);
         return RTX_OK;
     }
-
-    // otherwise insert into scheduler ready heap
-//    sched_insert(&g_tcbs[tid]);
 
 #ifdef DEBUG_0
     printf("k_tsk_create: entering...\n\r");
@@ -543,16 +470,12 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
 
 void k_tsk_exit(void) 
 {
-//    if (g_tcbs[gp_current_task->tid].priv == 0 && k_dealloc_p_stack(gp_current_task->tid) == RTX_ERR){
-//    	while (1){}
-//    }
-    // set tid number to free
+	// free tid
     U_TID_Q[U_TID_tail] = gp_current_task->tid;
     U_TID_tail = (U_TID_tail+1) % MAX_TASKS;
     --g_num_active_tasks;
 
-    // then run the new task
-//    switch_task(sched_peak()->tid, 1, 1);
+    // dealloc user stack if needed
     if (gp_current_task->priv == 0){
         k_dealloc_p_stack(gp_current_task->tid);
     }
@@ -568,24 +491,12 @@ void k_tsk_exit(void)
 
 int k_tsk_set_prio(task_t task_id, U8 prio) 
 {
-	//TODO: check that task_id is valid
     if (prio == 255 || prio == 0 || task_id == 0 || task_id >= MAX_TASKS) return RTX_ERR;
 
     if (gp_current_task->priv == 0 && g_tcbs[task_id].priv == 1) return RTX_ERR;
 
     if (g_tcbs[task_id].state == DORMANT) return RTX_ERR;
 
-//    if (gp_current_task->tid == task_id){
-//        gp_current_task->prio = prio;
-//        if (prio >= sched_peak()->prio){
-//        	k_tsk_run_new();
-////        	switch_task(sched_peak()->tid, 0, 1);
-//            // run new task and re-insert current task
-//        }
-//        return RTX_OK;
-//    }
-
-    // else task_id != current task
     g_tcbs[task_id].prio = prio;
     sched_remove(task_id);
     sched_insert(&g_tcbs[task_id]);
@@ -623,22 +534,6 @@ int k_tsk_get_info(task_t task_id, RTX_TASK_INFO *buffer)
     if (g_tcbs[task_id].state == DORMANT){
         return RTX_ERR;
     }
-    // for (int i = U_TID_head; i != U_TID_head; ++i ){
-    //     if(i == MAX_TASKS-1){
-    //         i = 0;
-    //     }
-
-    //     if (U_TID_Q[i] == task_id){
-    //         return RTX_ERR;
-    //     }
-    // }
-
-    /* The code fills the buffer with some fake task information. 
-       You should fill the buffer with correct information    */
-//    RTX_TASK_INFO *task_info = task_id == 0 ? &g_null_task_info : &U_rtx_task_infos[task_id-1];
-//
-//    task_info->state = g_tcbs[task_id].state; //update the prio and state from the tcb
-//    task_info->prio = g_tcbs[task_id].prio;
 
     return RTX_OK;     
 }
