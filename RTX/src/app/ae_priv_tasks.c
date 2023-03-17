@@ -140,8 +140,9 @@ void ktask1(void){
 	}
 
 	my_memory = k_mem_alloc(0xFF);
+//	printf("%d", my_memory);
 	if(my_memory == NULL)
-		printf("Failed to allocate memory!\r\n");
+		printf("Failed to allocate memory\n");
 
 //	printf("Trying to exhaust memory, this may take a while... \r\n");
 
@@ -161,6 +162,10 @@ void ktask1(void){
 	}
 	internal_error = 0;
 	for(int i =0; i < MAX_TASKS-4; i++){
+//		printf("%d \n", i);
+		//if(i == 205){
+			//printf("error reached");
+		//}
 		if(k_tsk_set_prio(utids[i], 100) != RTX_OK){
 			printf("FAILED to set priority!\r\n");
 			internal_error++;
@@ -203,7 +208,7 @@ void ktask1(void){
 //	printf("%d out of 1 tests passed!\r\n", 1-ownership_failed);
 
 	unsigned int end = timer_get_current_val(2);
-	printf("This took %u us\r\n", start - end);
+	printf("This took %u us\r\n", start-end);
 
     k_tsk_exit();
 
@@ -234,7 +239,7 @@ void ktask1(void){
 
 #if TEST == 6
 
-U8 utid[3];
+task_t utid[3];
 
 void utask3(void){
 	printf("7 ");
@@ -377,7 +382,7 @@ void ktask2(void){ // 200
 #endif
 
 #if TEST == 8
-U8 utid[10];
+task_t utid[10];
 void ktask1(void){
     printf("SUB TEST 1!\n");
     //case 1: yield when queue is empty (we are already running :)), 
@@ -575,8 +580,8 @@ void ktask1(void){
     //Use "linear congruential generator" for random number generation.
     int gen_index = 1;
     int gen_mod = MAX_TASKS - 2; //large prime number
-    int gen_a = 7; //multiplier for the random number generator
-    int gen_c = 1; //adder
+    int gen_a = 11; //multiplier for the random number generator
+    int gen_c = 3; //adder
 
     printf("Running Test 3.... This may take a while\n");
     //50 iterations of the test

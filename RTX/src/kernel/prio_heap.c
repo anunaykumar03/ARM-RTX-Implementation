@@ -2,7 +2,11 @@
 #include "k_inc.h"
 #include "prio_heap.h"
 
+//#define POWEROF2
+
 unsigned int sched_heap[MAX_TASKS+2];
+////int power2 = round_power_of_2(MAX_TASKS);
+//unsigned int sched_heap[1U << ((*(unsigned int*)(&(float(MAX_TASKS-1))) >> 23) - 126)];
 unsigned int heap_size = 0;
 unsigned int countL = 0;
 unsigned int countH = 0;
@@ -97,7 +101,7 @@ int has_higher_prio(unsigned int index_a, unsigned int index_b){
 
 void up_heap(unsigned int index){
     unsigned int temp = 0;
-    while(index > 1){
+    while(index > 1 && index <= heap_size){
         //current prio is higher than parent
         if(has_higher_prio(index, index >> 1)){
             temp = sched_heap[index];
@@ -146,8 +150,9 @@ void sched_insert(TCB *tcb){
     tcb->heap_idx = heap_size;
     tcb->countL = countL++;
     tcb->countH = countH;
-    if (countL == 0){
+    if (countL == 0xFFFFFFFF){
         ++countH;
+        countL = 0;
     }
     up_heap(heap_size);
 }

@@ -216,13 +216,11 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     p_tcb->priv     = 1;
     p_tcb->tid      = TID_NULL;
     p_tcb->state    = RUNNING;
-    p_tcb->countL	= 0;
-    p_tcb->countH 	= 0;
     p_tcb->u_stack_hi = 0;
-    p_tcb->k_stack_hi = 0;
     p_tcb->u_stack_size = 0;
-    p_tcb->k_stack_size = 0;
-    p_tcb->ptask = NULL;
+    p_tcb->k_stack_hi = (U32)k_alloc_k_stack(0);
+    p_tcb->k_stack_size = K_STACK_SIZE;
+    p_tcb->ptask = task_null;
     g_num_active_tasks++;
     gp_current_task = p_tcb;
     sched_insert(p_tcb);
@@ -282,8 +280,6 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     p_tcb->state = READY;
     p_tcb->prio = p_taskinfo->prio;
     p_tcb->priv = p_taskinfo->priv;
-    p_tcb->countL = 0;
-    p_tcb->countH = 0;
     p_tcb->ptask = p_taskinfo->ptask;
     U32 temp_size = p_tcb->u_stack_size;
     p_tcb->u_stack_size = 0;
@@ -557,7 +553,9 @@ void k_tsk_exit(void)
 
     // then run the new task
 //    switch_task(sched_peak()->tid, 1, 1);
-    k_dealloc_p_stack(gp_current_task->tid);
+    if (gp_current_task->priv == 0){
+        k_dealloc_p_stack(gp_current_task->tid);
+    }
     gp_current_task->state = DORMANT;
     sched_remove(gp_current_task->tid);
     k_tsk_run_new();
@@ -637,10 +635,10 @@ int k_tsk_get_info(task_t task_id, RTX_TASK_INFO *buffer)
 
     /* The code fills the buffer with some fake task information. 
        You should fill the buffer with correct information    */
-    RTX_TASK_INFO *task_info = task_id == 0 ? &g_null_task_info : &U_rtx_task_infos[task_id-1];
-
-    task_info->state = g_tcbs[task_id].state; //update the prio and state from the tcb
-    task_info->prio = g_tcbs[task_id].prio;
+//    RTX_TASK_INFO *task_info = task_id == 0 ? &g_null_task_info : &U_rtx_task_infos[task_id-1];
+//
+//    task_info->state = g_tcbs[task_id].state; //update the prio and state from the tcb
+//    task_info->prio = g_tcbs[task_id].prio;
 
     return RTX_OK;     
 }
