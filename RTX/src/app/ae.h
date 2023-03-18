@@ -95,6 +95,10 @@ extern task_t ktid3;
 #if TEST == 11
 #define BOOT_TASKS 1
 #endif
+
+#if TEST == 12
+#define BOOT_TASKS 2
+#endif
 /*
  *===========================================================================
  *                            FUNCTION PROTOTYPES

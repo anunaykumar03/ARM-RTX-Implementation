@@ -688,6 +688,63 @@ void ktask1(void){
 }
 #endif
 
+#if TEST == 12
+U8 utid[10];
+void ktask1(void){
+    //Here, the heap should look like
+    //      1
+    //    0   2
+
+    //make sure in this case, that yield works...
+    //eg remove insert doesn't mess up
+
+    //First set our current priority to 130 to yield to ktask2
+
+    printf("SUB TEST1 START =============\n");
+    printf("1 ");
+    k_tsk_set_prio(1, 130)
+    printf("3 ");
+    k_tsk_set_prio(2, 115)
+
+    //set own priority to lower priority
+    printf("9 ");
+    k_tsk_set_prio(1, 125);
+
+    k_tsk_set_prio(1, 115); //these two should not do anything!
+    k_tsk_yield();
+
+    printf("\nSUB TEST1 FINISHED =============\n");
+    k_tsk_exit();
+
+}
+
+void ktask2(void){
+    //set prio of 1 to be higher, let it run first
+    printf("2 ");
+    k_tsk_set_prio(1, 120);
+    printf("4 ");
+
+    //set prio to 120 again, nothing should happen
+    k_tsk_set_prio(1, 120);
+    printf("6 ");
+
+    //yield the task, again nothing should happen
+    k_tsk_yield();
+
+    //set the ktask 1 to have same prio
+    //Nothing should happen
+    printf("7 ");
+    k_tsk_set_prio(1, 115);
+
+    //yield, this should change to ktask1
+    printf("8 ");
+    k_tsk_yield();
+
+    printf("10 ");
+    k_tsk_exit();
+}
+#endif
+
 /*
  *===========================================================================
  *                             END OF FILE
