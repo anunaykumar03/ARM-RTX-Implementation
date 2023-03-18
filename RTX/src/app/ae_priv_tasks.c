@@ -702,12 +702,12 @@ void ktask1(void){
 
     printf("SUB TEST1 START =============\n");
     printf("1 ");
-    k_tsk_set_prio(1, 130)
+    k_tsk_set_prio(1, 130);
     printf("3 ");
-    k_tsk_set_prio(2, 115)
+    k_tsk_set_prio(2, 115);
 
     //set own priority to lower priority
-    printf("9 ");
+    printf("8 ");
     k_tsk_set_prio(1, 125);
 
     k_tsk_set_prio(1, 115); //these two should not do anything!
@@ -726,22 +726,64 @@ void ktask2(void){
 
     //set prio to 120 again, nothing should happen
     k_tsk_set_prio(1, 120);
-    printf("6 ");
+    printf("5 ");
 
     //yield the task, again nothing should happen
     k_tsk_yield();
 
     //set the ktask 1 to have same prio
     //Nothing should happen
-    printf("7 ");
+    printf("6 ");
     k_tsk_set_prio(1, 115);
 
     //yield, this should change to ktask1
-    printf("8 ");
+    printf("7 ");
     k_tsk_yield();
 
-    printf("10 ");
+    printf("9 ");
     k_tsk_exit();
+}
+#endif
+
+#if TEST == 13
+task_t utid[10];
+void *ptr;
+void utask1(void){
+	if (mem_dealloc(g_tcbs[utid[0]].u_stack_lo) != RTX_ERR){
+		printf("FAILED dealloc user");
+	}
+	printf("NAY\n");
+	ptr = mem_alloc(0x8);
+	if (ptr == NULL){
+		printf("FAILED alloc user");
+	}
+	tsk_yield();
+	if (mem_dealloc(ptr) != RTX_OK){
+		printf("FAILED dealloc user");
+	}
+	printf("WOOT");
+	tsk_exit();
+}
+
+void ktask1(void){
+	if (k_tsk_create(&utid[0], utask1, 200, 0x200) != RTX_OK){
+		printf("FAILED create");
+	}
+
+	if (k_mem_dealloc(g_tcbs[utid[0]].u_stack_lo) != RTX_ERR){
+		printf("FAILED dealloc");
+	}
+	printf("YAY\n");
+	if (tsk_set_prio(k_tsk_get_tid(), 200) != RTX_OK){
+		printf("FAILED set prio");
+	}
+
+	if (k_mem_dealloc(ptr) != RTX_ERR){
+		printf("why did u dealloc");
+	}
+	k_tsk_yield();
+	printf("NOOT");
+	k_tsk_exit();
 }
 #endif
 

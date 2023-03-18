@@ -195,15 +195,22 @@ tasks[0].k_stack_size = 0x200;
 #endif
 
 #if TEST == 12
-task[0].prio = 100;
-task[0].priv = 1;
-task[0].ptask = &ktask1;
-task[0].k_stack_size = 0x200;
+tasks[0].prio = 100;
+tasks[0].priv = 1;
+tasks[0].ptask = &ktask1;
+tasks[0].k_stack_size = 0x200;
 
-task[1].prio = 125;
-task[1].priv = 1;
-task[1].ptask = &ktask2;
-task[1].k_stack_size = 0x200;
+tasks[1].prio = 125;
+tasks[1].priv = 1;
+tasks[1].ptask = &ktask2;
+tasks[1].k_stack_size = 0x200;
+#endif
+
+#if TEST == 13
+tasks[0].prio = 100;
+tasks[0].priv = 1;
+tasks[0].ptask = &ktask1;
+tasks[0].k_stack_size = 0x200;
 #endif
 }
 /*

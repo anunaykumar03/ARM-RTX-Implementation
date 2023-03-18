@@ -50,7 +50,7 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 3
+#define TEST 13
 #if TEST == 1
 	extern task_t utid[3];
 	#define BOOT_TASKS 3
@@ -98,6 +98,10 @@ extern task_t ktid3;
 
 #if TEST == 12
 #define BOOT_TASKS 2
+#endif
+
+#if TEST == 13
+#define BOOT_TASKS 1
 #endif
 /*
  *===========================================================================

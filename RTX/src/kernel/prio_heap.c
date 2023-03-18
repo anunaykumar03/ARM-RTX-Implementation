@@ -2,50 +2,17 @@
 #include "k_inc.h"
 #include "prio_heap.h"
 
-//#define POWEROF2
-
 unsigned int sched_heap[MAX_TASKS+2];
-////int power2 = round_power_of_2(MAX_TASKS);
-//unsigned int sched_heap[1U << ((*(unsigned int*)(&(float(MAX_TASKS-1))) >> 23) - 126)];
+
 unsigned int heap_size = 0;
 unsigned int countL = 0;
 unsigned int countH = 0;
-
-//inline void sched_pop(){
-//    if (heap_size == 0){
-//        return;
-//    }
-//    sched_remove(sched_heap[0]);
-//}
 
 inline TCB* sched_peak(void){
     if (heap_size == 0){
         return NULL;
     }
     return &g_tcbs[sched_heap[1]];
-
-//    if(g_tcbs[sched_heap[1]].heap_idx != 1){
-//    	volatile unsigned int heaps[15];
-//    	volatile TCB* tcbs[15];
-//    	for(int i = 1; i < 15;i++){
-//    		heaps[i] = sched_heap[i];
-//    		tcbs[i] = &g_tcbs[sched_heap[i]];
-//    	}
-//
-//
-//    	while(1){
-//        	for(int i = 1; i < 15;i++){
-//        		if(tcbs[i]->heap_idx != heaps[i]){
-//        			break;
-//        		}
-//        		heaps[i] = sched_heap[i];
-//        		tcbs[i] = &g_tcbs[sched_heap[i]];
-//        		if(i == 14){
-//        			return tcbs[0];
-//        		}
-//        	}
-//    	}
-//    }
 }
 
 void check_heap(){
@@ -70,8 +37,6 @@ int has_higher_prio(unsigned int index_a, unsigned int index_b){
 		while(index_a > MAX_TASKS  || index_b > MAX_TASKS){};
 	}
 
-//    if(g_tcbs[sched_heap[index_a]].prio == 0) return 0;
-//    if(g_tcbs[sched_heap[index_b]].prio == 0) return 1;
     // optimize these comparisons
     if (g_tcbs[sched_heap[index_a]].prio < g_tcbs[sched_heap[index_b]].prio){
         return 1;
@@ -155,12 +120,7 @@ void sched_insert(TCB *tcb){
 
 void sched_remove(task_t tid){
     unsigned int old_idx = g_tcbs[tid].heap_idx;
-//    volatile int print_heap = 0;
-//    if(print_heap == 1){
-//    	for(int i = 0;i < heap_size;i++){
-//    		printf("i: %d, tid: %d, prio: %d\n", i, sched_heap[i], g_tcbs[sched_heap[i]].prio);
-//    	}
-//    }
+
     sched_heap[old_idx] = sched_heap[heap_size];
     g_tcbs[sched_heap[heap_size]].heap_idx = old_idx;
     heap_size--;
