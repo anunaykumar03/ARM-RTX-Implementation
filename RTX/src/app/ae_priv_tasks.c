@@ -37,170 +37,71 @@ task_t ktid1;
 task_t ktid2;
 task_t ktid3;
 
-#if TEST == 1
-task_t utid[3];
-#define TOTAL_STEPS 11
-char* pointer;
-static char validators[TOTAL_STEPS];
 
-void ktask1(void){
-	pointer = validators;
-	printf("Start");
-	if(k_tsk_create(&utid[0],utask1, 125, 0x200) != RTX_OK)
-	  printf("[ktask1] FAILED to create user task.\r\n");
+#if TEST == 0
+/*****************************************************************************
+ * @brief       a task that prints AAAAA, BBBBB, CCCCC,...., ZZZZZ on each line.
+ *              It yields the cpu every 6 lines are printed.
+ *****************************************************************************/
+void ktask1(void)
+{
+    int i = 0;
+    int j = 0;
+    long int x = 0;
 
-	if(k_tsk_create(&utid[1],utask2, 150, 0x200) != RTX_OK)
-	  printf("[ktask1] FAILED to create user task.\r\n");
+    while (1) {
+        char out_char = 'A' + i % 26;
+        for (j = 0; j < 5; j++ ) {
+            SER_PutChar(0,out_char);
+        }
 
-	if(k_tsk_create(&utid[2],utask3, 200, 0x200) != RTX_OK)
-	  printf("[ktask1] FAILED to create user task.\r\n");
+        SER_PutStr(0,"\n\r");
 
-  k_tsk_exit();
+        for ( x = 0; x < DELAY; x++);
+
+        if ( (++i) % 6 == 0 ) {
+            SER_PutStr(0,"priv_task1 before yielding cpu.\n\r");
+            k_tsk_yield();
+            SER_PutStr(0,"priv_task1 after yielding cpu.\n\r");
+        }
+    }
 }
 
-void ktask2(void){
-	printf("1 ");
-	*pointer = 1;
-	pointer++;
-	k_tsk_exit();
-}
+/*****************************************************************************
+ * @brief:      a task that prints 00000, 11111, 22222,....,99999 on each line.
+ *              It yields the cpu every 6 lines are printed
+ *              before printing these lines indefinitely, it creates a
+ *              new task and and obtains the task information. It then
+ *              changes the newly created task's priority.
+ *****************************************************************************/
 
-void ktask3(void){
-	printf("4 ");
-	*pointer = 4;
-	pointer++;
-	k_tsk_exit();
-}
+void ktask2(void)
+{
+    long int x = 0;
+    int i = 0;
+    int j = 0;
+    task_t tid;
 
-#endif
-
-
-#if TEST == 2
-void ktask1(void){
-    char eflag = 0;
-	printf("SPAWNING TASKS!\r\n");
-	task_t utid;
-	if(k_tsk_create(&utid, &utask1, 200, 0x200) != RTX_OK){
-		printf("FAILED to create user task from within privileged task!\r\n");
-		eflag++;
-	}
-	printf("%d out of 4 tests passed!\r\n", 1-eflag);
-	task_t ntid;
-	if(k_tsk_create(&ntid, &utask2, PRIO_NULL, 0x200) == RTX_OK){
-		printf("FAILED! Tasks cannot be created with priority PRIO_NULL!\r\n");
-		eflag++;
-	}
-	printf("%d out of 4 tests passed!\r\n", 2-eflag);
-	//Add null for tid and pointer to function
-	if(k_tsk_create(&ntid, NULL, 200, 0x200) == RTX_OK){
-		printf("[T_05] FAILED! NULL passed as function entry point\r\n");
-		eflag++;
-	}
-	printf("%d out of 4 tests passed!\r\n", 3-eflag);
-	if(k_tsk_create(NULL, &utask2, 200, 0x200) == RTX_OK){
-		printf("[T_05] FAILED! NULL passed as function entry point\r\n");
-		eflag++;
-	}
-	printf("%d out of 4 tests passed!\r\n", 4-eflag);
-
-	printf("============================================\r\n");
-	printf("=============Final test results=============\r\n");
-	printf("============================================\r\n");
-	printf("%d out of 4 tests passed!\r\n", 4-eflag);
-
-	k_tsk_exit();
-}
-
-#endif
-
-#if TEST == 3
-char eflag = 0;
-extern volatile int counter;
-void* my_memory;
-char ownership_failed;
-void ktask1(void){
-	ownership_failed = 0;
-	task_t utid1;
-	task_t utids[MAX_TASKS-4];
-	char internal_error = 0;
-	for(int i =0; i < MAX_TASKS-4; i++){
-		if(k_tsk_create(&utids[i], &utask1, 150, 0xFFF0) != RTX_OK){
-			printf("FAILED to create user task!\r\n");
-			internal_error++;
-		}
-	}
-	if(internal_error)
-		eflag++;
-	if(k_tsk_create(&utid1, &utask2, 150, 0x9) == RTX_OK){
-		printf("FAILED: created a user task with stack size that is not multiple of eight!\r\n");
-		eflag++;
-	}
-
-	my_memory = k_mem_alloc(0xFF);
-	if(my_memory == NULL)
-		printf("Failed to allocate memory!\r\n");
-
-	printf("Trying to exhaust memory, this may take a while... \r\n");
-
-	int size = 0x3FFFFFFF;
-
-	while(size > 0xFFF0){
-		while(k_mem_alloc(size) != NULL);
-		size = size >> 1;
-	}
+    k_tsk_create(&tid, &utask1, LOW, 0x200);  /*create a user task */
+    k_tsk_set_prio(tid, LOWEST);
 
 
+    for (i = 1;;i++) {
+        char out_char = '0' + i%10;
+        for (j = 0; j < 5; j++ ) {
+            SER_PutChar(0,out_char);
+        }
+        SER_PutStr(0,"\n\r");
 
-	//Resume execution after all created tasks complete
-	if(k_tsk_create(&utid1, &utask2, 200, 0xFFFF) == RTX_OK){
-		printf("FAILED: created task on system without memory!\r\n");
-		eflag++;
-	}
-	internal_error = 0;
-	for(int i =0; i < MAX_TASKS-4; i++){
-		if(k_tsk_set_prio(utids[i], 100) != RTX_OK){
-			printf("FAILED to set priority!\r\n");
-			internal_error++;
-		}
-	}
-	if(internal_error)
-		eflag++;
-	if(counter != MAX_TASKS-4)
-		eflag++;
-	counter = 0;
-	internal_error = 0;
-	for(int i =0; i < MAX_TASKS-4; i++){
-		if(k_tsk_create(&utids[i], &utask1, 150, 0xFFF0) != RTX_OK){
-			printf("FAILED to create user tasks: Stack deallocation might not be done properly once a task exits!\r\n");
-			internal_error++;
-		}
-	}
-	if(internal_error)
-		eflag++;
-
-	for(int i =0; i < MAX_TASKS-4; i++){
-		if(k_tsk_set_prio(utids[i], 100) != RTX_OK){
-			printf("FAILED to set priority!\r\n");
-			internal_error++;
-		}
-	}
-	if(internal_error)
-		eflag++;
-	if(counter != MAX_TASKS-4)
-		eflag++;
-
-
-	printf("============================================\r\n");
-	printf("=============Final test results=============\r\n");
-	printf("============================================\r\n");
-	printf("%d out of 8 tests passed!\r\n", 8-eflag);
-	printf("%d out of 1 tests passed!\r\n", 1-ownership_failed);
-
-    k_tsk_exit();
-
+        for ( x = 0; x < DELAY; x++); // some artifical delay
+        if ( i%6 == 0 ) {
+            SER_PutStr(0,"priv_task2 before yielding CPU.\n\r");
+            k_tsk_yield();
+            SER_PutStr(0,"priv_task2 after yielding CPU.\n\r");
+        }
+    }
 }
 #endif
-
 /*
  *===========================================================================
  *                             END OF FILE

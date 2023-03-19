@@ -50,19 +50,22 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 3
+#define TEST 0
 
-#if TEST == 1
-	extern task_t utid[3];
+#if TEST == 0
 	#define BOOT_TASKS 3
 #endif
 
-#if TEST == 2
+#if TEST == 1
 	#define BOOT_TASKS 1
 #endif
 
+#if TEST == 2
+	#define BOOT_TASKS 4
+#endif
+
 #if TEST == 3
-	#define BOOT_TASKS 1
+	#define BOOT_TASKS 2
 #endif
 
 /*
@@ -78,7 +81,6 @@ void ae_set_task_info (RTX_TASK_INFO *tasks, int num_tasks);
 int  ae_start(void);
 
 int  test_mem(void);
-
 #endif // ! AE_
 /*
  *===========================================================================
