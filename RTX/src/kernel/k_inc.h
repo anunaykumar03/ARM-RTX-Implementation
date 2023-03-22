@@ -78,7 +78,16 @@ typedef struct tcb {
     U32             u_stack_hi;         /**> user stack base addr. (high addr.) */
     void*			u_stack_lo;		 /**> low addr of user stack returned from alloc */
     void            (*ptask)();         /**> task entry address                 */
+    void*			mailbox_lo;
+    U32				mailbox_capacity;
+    U32				mailbox_size;
+    U32				mail_head;
+    U32				mail_tail;
 } TCB;
+
+typedef struct {
+	task_t sender_tid;
+} mailbox_metadata_t;
 
 /*
  *==========================================================================

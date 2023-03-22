@@ -251,6 +251,7 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     p_tcb->ptask = p_taskinfo->ptask;
     U32 temp_size = p_tcb->u_stack_size;
     p_tcb->u_stack_size = 0;
+    p_tcb->mail_box_lo = NULL;
 
     /*---------------------------------------------------------------
      *  Step1: allocate kernel stack for the task
