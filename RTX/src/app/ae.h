@@ -50,24 +50,59 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 0
-
-#if TEST == 0
+#define TEST 13
+#if TEST == 1
+	extern task_t utid[3];
 	#define BOOT_TASKS 3
 #endif
 
-#if TEST == 1
+#if TEST == 2
 	#define BOOT_TASKS 1
 #endif
 
-#if TEST == 2
-	#define BOOT_TASKS 4
+#if TEST == 3
+	#define BOOT_TASKS 1
 #endif
 
-#if TEST == 3
+#if TEST == 4
+	#define BOOT_TASKS MAX_TASKS-1
+#endif
+
+#if TEST == 5 //Priotity Change (II), set own prio conditions
+	#define BOOT_TASKS 5
+#endif
+
+#if TEST == 6 //task creation yield conditions
+	#define BOOT_TASKS 1
+#endif
+
+#if TEST == 7 // priority change I and II
 	#define BOOT_TASKS 2
 #endif
 
+#if TEST == 8 // yield
+	#define BOOT_TASKS 3
+#endif
+
+#if TEST == 9 // create
+	#define BOOT_TASKS 2
+#endif
+
+#if TEST == 10 // TIDs, ensure task_t can support MAX_TASKS
+#define BOOT_TASKS 1
+#endif
+
+#if TEST == 11
+#define BOOT_TASKS 1
+#endif
+
+#if TEST == 12
+#define BOOT_TASKS 2
+#endif
+
+#if TEST == 13
+#define BOOT_TASKS 1
+#endif
 /*
  *===========================================================================
  *                            FUNCTION PROTOTYPES
@@ -81,6 +116,7 @@ void ae_set_task_info (RTX_TASK_INFO *tasks, int num_tasks);
 int  ae_start(void);
 
 int  test_mem(void);
+
 #endif // ! AE_
 /*
  *===========================================================================

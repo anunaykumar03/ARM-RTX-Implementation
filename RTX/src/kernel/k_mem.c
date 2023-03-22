@@ -45,12 +45,11 @@
 
 #include "k_mem.h"
 #include "Serial.h"
-// #include "printf.h"
+#include "k_task.h"
 //#define DEBUG_0
 #ifdef DEBUG_0
 #include "printf.h"
 #endif  /* DEBUG_0 */
-// #include "printf.h"
 
 #define SET_BIT(var, bit) (var |= (1U << bit))
 #define CLEAR_BIT(var, bit) (var &= ~(1U << bit))
@@ -75,6 +74,7 @@ struct node_t {
 
 typedef struct {
 	unsigned int size;
+    unsigned int owner_tid;
 } header_t;
 
 /*
@@ -103,6 +103,9 @@ node_t *free_head;
  *===========================================================================
  */
 
+void* k_mem_alloc_internals(size_t size, task_t owner);
+int k_mem_dealloc_internals(void *ptr, task_t owner);
+
 U32* k_alloc_k_stack(task_t tid)
 {
     return g_k_stacks[tid+1];
@@ -110,8 +113,18 @@ U32* k_alloc_k_stack(task_t tid)
 
 U32* k_alloc_p_stack(task_t tid)
 {
-    return g_p_stacks[tid+1];
+	U32 size = g_tcbs[tid].u_stack_size;
+	U8 *ptr = k_mem_alloc_internals(size, (task_t) 0); // set owner to kernel
+	g_tcbs[tid].u_stack_lo = ptr;
+	if(ptr == NULL) return NULL;
+	return (U32 *)((U32)(ptr + size)); // return hi addr
 }
+
+int k_dealloc_p_stack(task_t tid)
+{
+	return k_mem_dealloc_internals(g_tcbs[tid].u_stack_lo, 0);
+}
+
 
 int k_mem_init(void) {
     unsigned int end_addr = (unsigned int) &Image$$ZI_DATA$$ZI$$Limit;
@@ -133,7 +146,7 @@ int k_mem_init(void) {
     return RTX_OK;
 }
 
-void* k_mem_alloc(size_t size) {
+void* k_mem_alloc_internals(size_t size, task_t owner){
 #ifdef DEBUG_0
     printf("k_mem_alloc: requested memory size = %d\r\n", size);
 #endif /* DEBUG_0 */
@@ -142,7 +155,11 @@ void* k_mem_alloc(size_t size) {
     // if(size & 0x3){
     //     size = (size & ~0x3) + 4;
     // }
-    size = (size + 3) & ~3;
+
+    // change to 8 byte aligned
+    // size = (size + 7) & ~7;
+    if (size == 0) return NULL;
+    size = (size + 7) & ~0x7;
     // size = size + 4 - (size & 0x3)
     unsigned int find_size = size + sizeof(header_t);
     node_t *curr_node = free_head;
@@ -164,6 +181,7 @@ void* k_mem_alloc(size_t size) {
             else {
             	prev_node->next = temp;
             }
+            ((header_t *)curr_node)->owner_tid = owner;
             return (void *)((unsigned int)curr_node + sizeof(header_t));
         }
         prev_node = curr_node;
@@ -174,14 +192,25 @@ void* k_mem_alloc(size_t size) {
     return NULL;
 }
 
-int k_mem_dealloc(void *ptr) {
-    if ((ptr == NULL) || ((unsigned int)ptr < (unsigned int)head + sizeof(header_t)) || ((unsigned int)ptr & 0x3) || ((unsigned int)ptr > RAM_END) ){
+void* k_mem_alloc(size_t size) {
+	return k_mem_alloc_internals(size, gp_current_task->tid);
+}
+
+int k_mem_dealloc_internals(void *ptr, task_t owner){
+    if ((ptr == NULL) || ((unsigned int)ptr < (unsigned int)head + sizeof(header_t)) || ((unsigned int)ptr & 0x7) || ((unsigned int)ptr > RAM_END) ){
         return RTX_ERR;
     }
+
 
     node_t *node_ptr = (node_t *)((header_t *)ptr - 1);
     node_t *start_node = head;
     node_t *end_node = free_head;
+    volatile header_t * t_check = (header_t *)node_ptr;
+
+    // check ownership
+    if (owner != t_check->owner_tid) {
+    	return RTX_ERR;
+    }
 
     while (end_node != NULL && end_node < node_ptr){
     	start_node = end_node;
@@ -216,6 +245,10 @@ int k_mem_dealloc(void *ptr) {
     printf("k_mem_dealloc: freeing 0x%x\r\n", (U32) ptr);
 #endif /* DEBUG_0 */
     return RTX_ERR;
+}
+
+int k_mem_dealloc(void *ptr) {
+	return k_mem_dealloc_internals(ptr, gp_current_task->tid);
 }
 
 int k_mem_count_extfrag(size_t size) {

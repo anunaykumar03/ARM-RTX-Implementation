@@ -50,7 +50,7 @@
  *===========================================================================
  */
 
-#define TCB_KSP_OFFSET  4
+#define TCB_KSP_OFFSET  0
 
 /*
  *===========================================================================
@@ -63,12 +63,21 @@
  * @note  You will need to add more fields to this structure.
  */
 typedef struct tcb {
-    struct tcb* 	next;   /**> next tcb, not used in this example         */
-    U32*        	ksp;    /**> ksp of the task, TCB_KSP_OFFSET = 4        */
-    U8          	tid;    /**> task id                                    */
-    U8          	prio;   /**> Execution priority                         */
-    U8          	state;  /**> task state                                 */
-    U8          	priv;   /**> = 0 unprivileged, =1 privileged            */
+//	U32				temp;
+    U32*        	ksp;        /**> ksp of the task, TCB_KSP_OFFSET = 4        */
+    task_t          tid;        /**> task id                                    */
+    U8          	prio;       /**> Execution priority                         */
+    U32          	countL;     /**> Entry count                                */
+    U32          	countH;     /**> Entry count                                */
+    U32             heap_idx;   /**> Index in scheduler heap                    */
+    U8          	state;      /**> task state                                 */
+    U8          	priv;       /**> = 0 unprivileged, =1 privileged            */
+    U16             k_stack_size;
+    U16             u_stack_size;       /**> user stack size in bytes           */
+    U32             k_stack_hi;         /**> kernel stack base (high addr.)     */
+    U32             u_stack_hi;         /**> user stack base addr. (high addr.) */
+    void*			u_stack_lo;		 /**> low addr of user stack returned from alloc */
+    void            (*ptask)();         /**> task entry address                 */
 } TCB;
 
 /*

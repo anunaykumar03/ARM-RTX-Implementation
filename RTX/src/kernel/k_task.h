@@ -52,6 +52,7 @@
  */
 
 extern TCB *gp_current_task;
+//extern RTX_TASK_INFO U_rtx_task_infos[MAX_TASKS-1];
 
 /*
  *===========================================================================
