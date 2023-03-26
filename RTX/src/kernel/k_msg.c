@@ -35,23 +35,23 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 	if (receiver_tid == 0 || receiver_tid >= MAX_TASKS || g_tcbs[receiver_tid].mailbox_lo == NULL
 		|| g_tcbs[receiver_tid].mailbox_size == g_tcbs[receiver_tid].mailbox_capacity || g_tcbs[receiver_tid].state == DORMANT) return RTX_ERR;
 
-	if (buf == NULL || ((RTX_MSG_HDR *)buf)->length + sizeof(mail_metadata) > g_tcbs[receiver_tid].mailbox_capacity - g_tcbs[receiver_tid].mailbox_size) return RTX_ERR;
+	if (buf == NULL || ((RTX_MSG_HDR *)buf)->length < MIN_MSG_SIZE || ((RTX_MSG_HDR *)buf)->length + sizeof(mailbox_metadata_t) > g_tcbs[receiver_tid].mailbox_capacity - g_tcbs[receiver_tid].mailbox_size) return RTX_ERR;
 
 	U8* recv_box = g_tcbs[receiver_tid].mailbox_lo;
 	U32 *head = &g_tcbs[receiver_tid].mail_head;
-	U32 *tail = &g_tcbs[receiver_tid].mail_tail;
 
 	// set metadata
-	mailbox_metadata_t* metadata = recv_box + head;
+	mailbox_metadata_t* metadata = recv_box + *head;
 	metadata->sender_tid = gp_current_task->tid;
 
 	U32 msg_len = ((RTX_MSG_HDR *)buf)->length;
 	U32 mb_cap = g_tcbs[receiver_tid].mailbox_capacity;
 	*head = (*head + sizeof(mailbox_metadata_t)) % mb_cap;
 
+    U8* rec_buf = (U8 *)buf;
 	// copy message (includes msg header)
 	for (int i = 0; i < msg_len; i++) {
-		recv_box[*head] = buf[i];
+		recv_box[*head] = rec_buf[i];
 		*head = (*head + 1) % mb_cap;
 	}
 
@@ -72,11 +72,45 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 }
 
 int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
+    if (gp_current_task->mailbox_lo == NULL) return RTX_ERR;
+    if (gp_current_task->mailbox_size == 0) {
+        // block current task
+        gp_current_task->state = BLK_MSG;
+        sched_remove(gp_current_task);
+        k_tsk_run_new();
+        return RTX_OK;
+    }
+    
+	U32 *tail = &(gp_current_task->mail_tail);
+    U8* start = (U8 *)(gp_current_task->mailbox_lo) + *tail;
+    mailbox_metadata_t* metadata = (mailbox_metadata_t *)start;
+    U8* msg_start = start + sizeof(mailbox_metadata_t);
+	U32 mb_cap = gp_current_task->mailbox_capacity;
+    
+    U32 msg_len = ((RTX_MSG_HDR *)msg_start)->length;
+    if (buf == NULL || msg_len > len) { // message does not fit in buf
+        // discard top message
+	    gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + msg_len;
+        *tail = (*tail + sizeof(mailbox_metadata_t) + msg_len) % mb_cap;
+        return RTX_ERR;
+    }
+
+    U8* fill_buf = buf;
+    for (int i = 0; i < msg_len; i++){
+        fill_buf[i] = msg_start + *tail;
+        *tail = (*tail + 1) % mb_cap;
+    }
+	gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + msg_len;
+
+    if (sender_tid != NULL){
+        *sender_tid = metadata->sender_tid;
+    }
+
+    return RTX_OK;
 
 #ifdef DEBUG_0
     printf("k_recv_msg: sender_tid  = 0x%x, buf=0x%x, len=%d\r\n", sender_tid, buf, len);
 #endif /* DEBUG_0 */
-    return 0;
 }
 
 int k_recv_msg_nb(task_t *sender_tid, void *buf, size_t len) {

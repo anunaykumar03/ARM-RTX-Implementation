@@ -193,26 +193,31 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     gp_current_task = p_tcb;
     sched_insert(p_tcb);
 
+    // initialize TID number queue
+    int j = 1;
+    for (int i = 1; i < MAX_TASKS; i++){
+        // initialize all invalid TCBs to dormant
+        g_tcbs[i].state = DORMANT;
+        if (i == TID_KCD || i == TID_UART_IRQ){
+            continue;
+        }
+        U_TID_Q[j] = i;
+        j++;
+    }
+    U_TID_head = 1;
+    U_TID_tail = 1;
+
     // create the rest of the tasks
     p_taskinfo = task_info;
     for ( int i = 0; i < num_tasks; i++ ) {
-        TCB *p_tcb = &g_tcbs[i+1];
-        if (k_tsk_create_new(p_taskinfo, p_tcb, i+1) == RTX_OK) {
+        TCB *p_tcb = &g_tcbs[U_TID_Q[U_TID_head]];
+        if (k_tsk_create_new(p_taskinfo, p_tcb, U_TID_Q[U_TID_head]) == RTX_OK) {
+            U_TID_head = ++U_TID_head % MAX_TASKS;
         	g_num_active_tasks++;
     		sched_insert(p_tcb);
         }
         p_taskinfo++;
     }
-
-    // initialize TID number queue
-    for (int i = num_tasks+1; i < MAX_TASKS; i++){
-        U_TID_Q[i] = i;
-        // initialize all invalid TCBs to dormant
-        g_tcbs[i].state = DORMANT;
-    }
-    U_TID_head = (num_tasks+1) % MAX_TASKS;
-    U_TID_tail = 0;
-
 
     return RTX_OK;
 }
@@ -239,19 +244,24 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
 
     U32 *sp;
 
-    if (p_taskinfo == NULL || p_tcb == NULL)
+    if (p_taskinfo == NULL || p_tcb == NULL || p_taskinfo->prio == PRIO_NULL || p_taskinfo->ptask == NULL) // prio RT?
     {
         return RTX_ERR;
     }
 
     p_tcb->tid = tid;
+    if (p_taskinfo->ptask == kcd_task){
+        if (g_tcbs[TID_KCD].state != DORMANT || p_taskinfo->priv != 0) return RTX_ERR;
+        p_tcb->tid = TID_KCD;
+    }
     p_tcb->state = READY;
     p_tcb->prio = p_taskinfo->prio;
     p_tcb->priv = p_taskinfo->priv;
     p_tcb->ptask = p_taskinfo->ptask;
     U32 temp_size = p_tcb->u_stack_size;
     p_tcb->u_stack_size = 0;
-    p_tcb->mail_box_lo = NULL;
+    p_tcb->mailbox_lo = NULL;
+    
 
     /*---------------------------------------------------------------
      *  Step1: allocate kernel stack for the task
@@ -472,8 +482,10 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
 void k_tsk_exit(void) 
 {
 	// free tid
-    U_TID_Q[U_TID_tail] = gp_current_task->tid;
-    U_TID_tail = (U_TID_tail+1) % MAX_TASKS;
+    if (gp_current_task->tid != 159){
+        U_TID_Q[U_TID_tail] = gp_current_task->tid;
+        U_TID_tail = (U_TID_tail+1) % MAX_TASKS;
+    }
     --g_num_active_tasks;
 
     // dealloc user stack if needed
