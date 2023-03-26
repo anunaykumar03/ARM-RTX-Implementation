@@ -6,7 +6,9 @@
  */
 
 #include "k_msg.h"
-
+#include "k_mem.h"
+#include "prio_heap.h"
+#include "kcd_task.h"
 #ifdef DEBUG_0
 #include "printf.h"
 #endif /* ! DEBUG_0 */
@@ -41,8 +43,13 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 	U32 *head = &g_tcbs[receiver_tid].mail_head;
 
 	// set metadata
-	mailbox_metadata_t* metadata = recv_box + *head;
+	mailbox_metadata_t* metadata = (mailbox_metadata_t *)(recv_box + *head);
 	metadata->sender_tid = gp_current_task->tid;
+	if (UART_IRQ_flag){
+		// message is from UART
+		metadata->sender_tid = TID_UART_IRQ;
+
+	}
 
 	U32 msg_len = ((RTX_MSG_HDR *)buf)->length;
 	U32 mb_cap = g_tcbs[receiver_tid].mailbox_capacity;
@@ -60,7 +67,7 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 	// unblock receiver & switch if needed
 	if(g_tcbs[receiver_tid].state == BLK_MSG){
 		g_tcbs[receiver_tid].state = READY;
-		sched_insert(receiver_tid);
+		sched_insert(&g_tcbs[receiver_tid]);
 		k_tsk_yield();
 	}
 
@@ -76,7 +83,7 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
     if (gp_current_task->mailbox_size == 0) {
         // block current task
         gp_current_task->state = BLK_MSG;
-        sched_remove(gp_current_task);
+        sched_remove(gp_current_task->tid);
         k_tsk_run_new();
         return RTX_OK;
     }
@@ -97,7 +104,7 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
 
     U8* fill_buf = buf;
     for (int i = 0; i < msg_len; i++){
-        fill_buf[i] = msg_start + *tail;
+        fill_buf[i] = msg_start[*tail];
         *tail = (*tail + 1) % mb_cap;
     }
 	gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + msg_len;

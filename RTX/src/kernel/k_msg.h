@@ -16,4 +16,6 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len);
 int k_recv_msg_nb(task_t *sender_tid, void *buf, size_t len);
 int k_mbx_ls(task_t *buf, int count);
 
+extern int UART_IRQ_flag;
+
 #endif /* ! K_MSG_H_ */

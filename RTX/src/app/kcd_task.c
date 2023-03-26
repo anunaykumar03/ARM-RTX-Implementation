@@ -1,6 +1,9 @@
 /* The KCD Task Template File */
 #include "common.h"
 #include "k_msg.h"
+#include "kcd_task.h"
+#include "rtx.h"
+#include "Serial.h"
 
 #define MAX_CMD_LEN 64
 
@@ -54,7 +57,7 @@ void kcd_task(void)
                 }
                 else {
                     // compose message
-                    U8* send_buf[cmd_str_idx + sizeof(RTX_MSG_HDR)];
+                    U8 send_buf[cmd_str_idx + sizeof(RTX_MSG_HDR)];
 
                     RTX_MSG_HDR* send_hdr = (RTX_MSG_HDR *)send_buf;
                     send_hdr->length = cmd_str_idx-1 + sizeof(RTX_MSG_HDR); // -1 since '%' is not sent
@@ -112,3 +115,4 @@ void kcd_task(void)
         }
     }
 }
+

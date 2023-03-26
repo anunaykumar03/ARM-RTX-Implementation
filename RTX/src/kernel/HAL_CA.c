@@ -46,6 +46,7 @@
 #include "k_task.h"
 #include "timer.h"
 #include "printf.h"
+#include "k_msg.h"
 
 #pragma push
 #pragma arm
@@ -224,7 +225,7 @@ EXIT_IRQ
 
 #pragma pop
 
-
+int UART_IRQ_flag = 0;
 void c_IRQ_Handler(void)
 {
 	static unsigned int a9_timer_last = 0xFFFFFFFF; // the initial value of free-running timer
@@ -254,7 +255,9 @@ void c_IRQ_Handler(void)
                                 *send_body = c;
                                 // how can we tell if msg is sent from here? we cant get the tid from gp_current_task...
                                 // what if send fails? discard message
+                                UART_IRQ_flag = 1;
                                 k_send_msg(TID_KCD, send_buf);
+                                UART_IRQ_flag = 0;
 			}
 			switch_flag = 1;
 		}

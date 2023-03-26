@@ -53,6 +53,7 @@
 #include "k_task.h"
 #include "k_rtx.h"
 #include "prio_heap.h"
+#include "kcd_task.h"
 
 #ifdef DEBUG_0
 #include "printf.h"

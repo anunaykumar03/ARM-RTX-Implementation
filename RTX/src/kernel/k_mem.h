@@ -55,6 +55,7 @@ int     k_mem_count_extfrag (size_t size);
 U32    *k_alloc_k_stack     (task_t tid);
 U32    *k_alloc_p_stack     (task_t tid);
 int	 	k_dealloc_p_stack	(task_t tid);
+void*   k_mem_alloc_internals(size_t size, task_t owner);
 #endif // ! K_MEM_H_
 
 /*
