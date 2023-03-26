@@ -211,10 +211,14 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     // create the rest of the tasks
     p_taskinfo = task_info;
     for ( int i = 0; i < num_tasks; i++ ) {
-        TCB *p_tcb = &g_tcbs[U_TID_Q[U_TID_head]];
+        TCB *p_tcb = p_taskinfo->ptask == kcd_task ? &g_tcbs[TID_KCD] : &g_tcbs[U_TID_Q[U_TID_head]];
+
+        p_tcb->u_stack_size = p_taskinfo->u_stack_size;
         if (k_tsk_create_new(p_taskinfo, p_tcb, U_TID_Q[U_TID_head]) == RTX_OK) {
-            U_TID_head = ++U_TID_head % MAX_TASKS;
-        	g_num_active_tasks++;
+        	if(p_taskinfo->ptask != kcd_task){
+				U_TID_head = ++U_TID_head % MAX_TASKS;
+        	}
+			g_num_active_tasks++;
     		sched_insert(p_tcb);
         }
         p_taskinfo++;
@@ -254,6 +258,7 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     if (p_taskinfo->ptask == kcd_task){
         if (g_tcbs[TID_KCD].state != DORMANT || p_taskinfo->priv != 0) return RTX_ERR;
         p_tcb->tid = TID_KCD;
+        tid = TID_KCD;
     }
     p_tcb->state = READY;
     p_tcb->prio = p_taskinfo->prio;

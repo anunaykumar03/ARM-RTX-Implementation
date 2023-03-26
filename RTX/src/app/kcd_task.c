@@ -22,8 +22,10 @@ void kcd_task(void)
     U32 cmd_str_idx = 0;
 
     U32 recv_buf_len = sizeof(RTX_MSG_HDR) + 1; // KEY_IN and KEY_REG messages should have data len = 1
-    U8 recv_buf[recv_buf_len];                  // holds current message to be processed
+    static U8 recv_buf[sizeof(RTX_MSG_HDR) + 1];                  // holds current message to be processed
     task_t* sender_tid;
+
+    static U8 send_buf[sizeof(RTX_MSG_HDR) + MAX_CMD_LEN];
 
     while (1){
         if (recv_msg(sender_tid, recv_buf, recv_buf_len) != RTX_OK) {
@@ -57,8 +59,6 @@ void kcd_task(void)
                 }
                 else {
                     // compose message
-                    U8 send_buf[cmd_str_idx + sizeof(RTX_MSG_HDR)];
-
                     RTX_MSG_HDR* send_hdr = (RTX_MSG_HDR *)send_buf;
                     send_hdr->length = cmd_str_idx-1 + sizeof(RTX_MSG_HDR); // -1 since '%' is not sent
                     send_hdr->type = KCD_CMD;

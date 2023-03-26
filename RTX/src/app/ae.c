@@ -27,6 +27,7 @@
  */
 
 #include "ae.h"
+extern void kcd_task(void);
 
 /**************************************************************************//**
  * @brief   	ae_init
@@ -76,143 +77,97 @@ void ae_set_task_info(RTX_TASK_INFO *tasks, int num_tasks) {
         return;
     }
 
-#if TEST == 1
-    printf("RUNNING\r\n");
-
-	tasks[0].prio = 100;
-	tasks[0].priv = 1;
-	tasks[0].ptask = &ktask1;
+#if TEST == 0
+    tasks[0].ptask = &ktask1;
+    tasks[0].priv  = 1;
+    tasks[0].prio  = 100;
 	tasks[0].k_stack_size = (0x200);
 
-  	tasks[1].prio = 125;
-	tasks[1].priv = 1;
 	tasks[1].ptask = &ktask2;
+	tasks[1].priv  = 1;
+	tasks[1].prio  = 100;
 	tasks[1].k_stack_size = (0x200);
 
-  	tasks[2].prio = 150;
-	tasks[2].priv = 1;
-	tasks[2].ptask = &ktask3;
+	tasks[2].ptask = &utask2;
+	tasks[2].priv  = 0;
+	tasks[2].prio  = 100;
 	tasks[2].k_stack_size = (0x200);
+#endif
+
+
+#if TEST == 1
+
+    printf("============================================\r\n");
+    printf("============================================\r\n");
+    printf("Info: Starting T_01!\r\n");
+    printf("Info: Initializing system with a single user task!\r\n");
+
+    tasks[0].prio = HIGH;
+	tasks[0].priv = 0;
+	tasks[0].ptask = &utask1;
+	tasks[0].k_stack_size = 0x200;
+	tasks[0].u_stack_size = 0x200;
 
 #endif
 
 
 #if TEST == 2
-  	tasks[0].prio = 100;
-	tasks[0].priv = 1;
-	tasks[0].ptask = &ktask1;
+
+    printf("============================================\r\n");
+    printf("============================================\r\n");
+    printf("Info: Starting T_02!\r\n");
+    printf("Info: Initializing system with three user task and the KCD task!\r\n");
+    printf("Info: UT1 (M), UT2 (L), KCD (H), UT4 (L)!\r\n");
+
+    tasks[0].prio = 150;
+	tasks[0].priv = 0;
+	tasks[0].ptask = &utask1;
 	tasks[0].k_stack_size = 0x200;
+	tasks[0].u_stack_size = 0x200;
+
+    tasks[1].prio = 175;
+	tasks[1].priv = 0;
+	tasks[1].ptask = &utask2;
+	tasks[1].k_stack_size = 0x200;
+	tasks[1].u_stack_size = 0x200;
+
+	tasks[2].prio = 100;
+	tasks[2].priv = 0;
+	tasks[2].ptask = &kcd_task;
+	tasks[2].k_stack_size = 0x200;
+	tasks[2].u_stack_size = 0x200;
+
+	tasks[3].prio = 200;
+	tasks[3].priv = 0;
+	tasks[3].ptask = &utask3;
+	tasks[3].k_stack_size = 0x200;
+	tasks[3].u_stack_size = 0x200;
 
 #endif
 
 #if TEST == 3
 
-  	tasks[0].prio = 125;
-	tasks[0].priv = 1;
-	tasks[0].ptask = &ktask1;
+    printf("============================================\r\n");
+    printf("============================================\r\n");
+    printf("Info: Starting T_03!\r\n");
+    printf("Info: Initializing system with two user tasks (M and L priorities)!\r\n");
+
+    tasks[0].prio = 150;
+	tasks[0].priv = 0;
+	tasks[0].ptask = &utask1;
 	tasks[0].k_stack_size = 0x200;
+	tasks[0].u_stack_size = 0x200;
+
+    tasks[1].prio = 175;
+	tasks[1].priv = 0;
+	tasks[1].ptask = &utask2;
+	tasks[1].k_stack_size = 0x200;
+	tasks[1].u_stack_size = 0x200;
 
 #endif
 
-#if TEST == 4
-	for (int i = 0; i < num_tasks; i++){
-	  	tasks[i].prio = 125;
-		tasks[i].priv = 1;
-		tasks[i].ptask = &ktask1;
-		tasks[i].k_stack_size = 0x200;
-	}
-#endif
-
-#if TEST == 5
-	for (int i = 0; i < num_tasks; i++){
-	  	tasks[i].prio = 125;
-		tasks[i].priv = 1;
-		tasks[i].ptask = &ktask1;
-		tasks[i].k_stack_size = 0x200;
-	}
-#endif
-
-#if TEST == 6
-	  	tasks[0].prio = 125;
-		tasks[0].priv = 1;
-		tasks[0].ptask = &ktask1;
-		tasks[0].k_stack_size = 0x200;
-#endif
-
-#if TEST == 7
-		tasks[0].prio = 125;
-		tasks[0].priv = 1;
-		tasks[0].ptask = &ktask1;
-		tasks[0].k_stack_size = (0x200);
-
-	  	tasks[1].prio = 200;
-		tasks[1].priv = 1;
-		tasks[1].ptask = &ktask2;
-		tasks[1].k_stack_size = (0x200);
-#endif
-
-#if TEST == 8
-tasks[0].prio = 100;
-tasks[0].priv = 1;
-tasks[0].ptask = &ktask1;
-tasks[0].k_stack_size = 0x200;
-
-tasks[1].prio = 125;
-tasks[1].priv = 1;
-tasks[1].ptask = &ktask2;
-tasks[1].k_stack_size = 0x200;
-
-tasks[2].prio = 150;
-tasks[2].priv = 1;
-tasks[2].ptask = &ktask3;
-tasks[2].k_stack_size = 0x200;
-#endif
-
-#if TEST == 9
-tasks[0].prio = 125;
-tasks[0].priv = 1;
-tasks[0].ptask = &ktask1;
-tasks[0].k_stack_size = 0x200;
-
-tasks[1].prio = 254;
-tasks[1].priv = 1;
-tasks[1].ptask = &ktask2;
-tasks[1].k_stack_size = 0x200;
-#endif
-
-#if TEST == 10
-tasks[0].prio = 100;
-tasks[0].priv = 1;
-tasks[0].ptask = &ktask1;
-tasks[0].k_stack_size = 0x200;
-#endif
-
-#if TEST == 11
-tasks[0].prio = 1;
-tasks[0].priv = 1;
-tasks[0].ptask = &ktask1;
-tasks[0].k_stack_size = 0x200;
-#endif
-
-#if TEST == 12
-tasks[0].prio = 100;
-tasks[0].priv = 1;
-tasks[0].ptask = &ktask1;
-tasks[0].k_stack_size = 0x200;
-
-tasks[1].prio = 125;
-tasks[1].priv = 1;
-tasks[1].ptask = &ktask2;
-tasks[1].k_stack_size = 0x200;
-#endif
-
-#if TEST == 13
-tasks[0].prio = 100;
-tasks[0].priv = 1;
-tasks[0].ptask = &ktask1;
-tasks[0].k_stack_size = 0x200;
-#endif
 }
+
 /*
  *===========================================================================
  *                             END OF FILE
