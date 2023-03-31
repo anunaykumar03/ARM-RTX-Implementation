@@ -1,7 +1,6 @@
 /* The KCD Task Template File */
 #include "common.h"
 #include "k_msg.h"
-#include "kcd_task.h"
 #include "rtx.h"
 #include "Serial.h"
 

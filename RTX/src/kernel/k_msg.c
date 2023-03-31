@@ -8,10 +8,11 @@
 #include "k_msg.h"
 #include "k_mem.h"
 #include "prio_heap.h"
-#include "kcd_task.h"
 #ifdef DEBUG_0
 #include "printf.h"
 #endif /* ! DEBUG_0 */
+
+extern void kcd_task(void);
 
 int k_mbx_create(size_t size) {
 	if (size < MIN_MBX_SIZE) return RTX_ERR;
