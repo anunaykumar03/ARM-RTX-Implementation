@@ -80,6 +80,7 @@ unsigned int U_TID_tail;
 unsigned int counterL = 0;
 unsigned int counterH = 0;
 
+extern void kcd_task(void);
 /*---------------------------------------------------------------------------
 The memory map of the OS image may look like the following:
 
@@ -175,7 +176,7 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     RTX_TASK_INFO *p_taskinfo = &g_null_task_info;
     g_num_active_tasks = 0;
 
-    if (num_tasks > MAX_TASKS) {
+    if (num_tasks >= MAX_TASKS) {
     	return RTX_ERR;
     }
 
@@ -206,20 +207,25 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
         j++;
     }
     U_TID_head = 1;
-    U_TID_tail = 1;
+    U_TID_tail = 0;
 
     // create the rest of the tasks
+    int is_kcd_init = 0;
     p_taskinfo = task_info;
     for ( int i = 0; i < num_tasks; i++ ) {
-        TCB *p_tcb = p_taskinfo->ptask == kcd_task ? &g_tcbs[TID_KCD] : &g_tcbs[U_TID_Q[U_TID_head]];
-
-        p_tcb->u_stack_size = p_taskinfo->u_stack_size;
+        TCB *p_tcb = &g_tcbs[U_TID_Q[U_TID_head]];
+        if(i == num_tasks-1 && !is_kcd_init && num_tasks >= TID_KCD){
+            p_tcb = &g_tcbs[TID_KCD];
+        }
         if (k_tsk_create_new(p_taskinfo, p_tcb, U_TID_Q[U_TID_head]) == RTX_OK) {
         	if(p_taskinfo->ptask != kcd_task){
 				U_TID_head = ++U_TID_head % MAX_TASKS;
         	}
 			g_num_active_tasks++;
     		sched_insert(p_tcb);
+            if (p_taskinfo->ptask != NULL && p_taskinfo->ptask == kcd_task){
+                is_kcd_init = 1;
+            }
         }
         p_taskinfo++;
     }
@@ -255,11 +261,10 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     }
 
     p_tcb->tid = tid;
-    if (p_taskinfo->ptask == kcd_task){
-        if (g_tcbs[TID_KCD].state != DORMANT || p_taskinfo->priv != 0) return RTX_ERR;
-        p_tcb->tid = TID_KCD;
-        tid = TID_KCD;
-    }
+    //if (p_taskinfo->ptask == kcd_task){
+    //    if (g_tcbs[TID_KCD].state != DORMANT || p_taskinfo->priv != 0) return RTX_ERR;
+    //    p_tcb->tid = TID_KCD;
+    //}
     p_tcb->state = READY;
     p_tcb->prio = p_taskinfo->prio;
     p_tcb->priv = p_taskinfo->priv;
