@@ -1,6 +1,7 @@
 #include "common.h"
 #include "k_inc.h"
 #include "prio_heap.h"
+#include "k_task.h"
 
 unsigned int sched_heap[MAX_TASKS+2];
 
@@ -12,21 +13,7 @@ inline TCB* sched_peak(void){
     if (heap_size == 0){
         return NULL;
     }
-    return &g_tcbs[sched_heap[1]];
-}
-
-void check_heap(){
-	volatile int heap_size1 = heap_size;
-    volatile TCB *p_old_task = gp_current_task;
-    volatile TCB *first_task = &g_tcbs[sched_heap[1]];
-
-	if(heap_size1 != 1 || p_old_task->tid != 0){
-		while(heap_size1 != 1 || p_old_task->tid != 0 || first_task->tid != 0){
-
-		}
-	}
-
-	return;
+    return k_tsk_get_tcb(sched_heap[1]);
 }
 
 //returns 1 if a has higher prio than b
@@ -37,22 +24,25 @@ int has_higher_prio(unsigned int index_a, unsigned int index_b){
 		while(index_a > MAX_TASKS  || index_b > MAX_TASKS){};
 	}
 
+    TCB * tcbA = k_tsk_get_tcb(sched_heap[index_a]);
+    TCB * tcbB = k_tsk_get_tcb(sched_heap[index_b]);
+
     // optimize these comparisons
-    if (g_tcbs[sched_heap[index_a]].prio < g_tcbs[sched_heap[index_b]].prio){
+    if (tcbA->prio < tcbB->prio){
         return 1;
     }
-    else if (g_tcbs[sched_heap[index_a]].prio > g_tcbs[sched_heap[index_b]].prio){
+    else if (tcbA->prio > tcbB->prio){
         return 0;
     }
 
-    if (g_tcbs[sched_heap[index_a]].countH < g_tcbs[sched_heap[index_b]].countH) {
+    if (tcbA->countH < tcbB->countH) {
         return 1;
     }
-    else if (g_tcbs[sched_heap[index_a]].countH > g_tcbs[sched_heap[index_b]].countH) {
+    else if (tcbA->countH > tcbB->countH) {
         return 0;
     }
 
-    if (g_tcbs[sched_heap[index_a]].countL < g_tcbs[sched_heap[index_b]].countL) {
+    if (tcbA->countL < tcbB->countL) {
         return 1;
     }
     else {
@@ -69,8 +59,8 @@ void up_heap(unsigned int index){
             sched_heap[index] = sched_heap[index >> 1];
             sched_heap[index >> 1] = temp;
 
-            g_tcbs[sched_heap[index]].heap_idx = index;
-            g_tcbs[sched_heap[index >> 1]].heap_idx = index >> 1;
+            k_tsk_get_tcb(sched_heap[index])->heap_idx = index;
+            k_tsk_get_tcb(sched_heap[index >> 1])->heap_idx = index >> 1;
         } else {
             break;
         }
@@ -95,8 +85,8 @@ void down_heap(unsigned int index){
             sched_heap[index] = sched_heap[smaller_child];
             sched_heap[smaller_child] = temp;
 
-            g_tcbs[sched_heap[index]].heap_idx = index;
-            g_tcbs[sched_heap[smaller_child]].heap_idx = smaller_child;
+            k_tsk_get_tcb(sched_heap[index])->heap_idx = index;
+            k_tsk_get_tcb(sched_heap[smaller_child])->heap_idx = smaller_child;
         } else{
             break;
         }
@@ -119,10 +109,12 @@ void sched_insert(TCB *tcb){
 }
 
 void sched_remove(task_t tid){
-    unsigned int old_idx = g_tcbs[tid].heap_idx;
+    TCB * target_tcb = k_tsk_get_tcb(tid);
+    TCB * swap_tcb = k_tsk_get_tcb(sched_heap[heap_size]);
+    unsigned int old_idx = target_tcb->heap_idx;
 
     sched_heap[old_idx] = sched_heap[heap_size];
-    g_tcbs[sched_heap[heap_size]].heap_idx = old_idx;
+    swap_tcb->heap_idx = old_idx;
     heap_size--;
 
     //check if we have higher priority than parent. If so, upheap, else downheap.

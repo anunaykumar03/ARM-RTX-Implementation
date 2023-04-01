@@ -35,13 +35,18 @@ int k_mbx_create(size_t size) {
 }
 
 int k_send_msg(task_t receiver_tid, const void *buf) {
-	if (receiver_tid == 0 || receiver_tid >= MAX_TASKS || g_tcbs[receiver_tid].mailbox_lo == NULL
-		|| g_tcbs[receiver_tid].mailbox_size == g_tcbs[receiver_tid].mailbox_capacity || g_tcbs[receiver_tid].state == DORMANT) return RTX_ERR;
 
-	if (buf == NULL || ((RTX_MSG_HDR *)buf)->length < MIN_MSG_SIZE || ((RTX_MSG_HDR *)buf)->length + sizeof(mailbox_metadata_t) > g_tcbs[receiver_tid].mailbox_capacity - g_tcbs[receiver_tid].mailbox_size) return RTX_ERR;
+	if (receiver_tid == 0 || receiver_tid >= MAX_TASKS) return RTX_ERR;
 
-	U8* recv_box = g_tcbs[receiver_tid].mailbox_lo;
-	U32 *head = &g_tcbs[receiver_tid].mail_head;
+	TCB * receiver_tcb = k_tsk_get_tcb(receiver_tid);
+	
+	if( receiver_tcb->mailbox_lo == NULL
+		|| receiver_tcb->mailbox_size == receiver_tcb->mailbox_capacity || receiver_tcb->state == DORMANT) return RTX_ERR;
+
+	if (buf == NULL || ((RTX_MSG_HDR *)buf)->length < MIN_MSG_SIZE || ((RTX_MSG_HDR *)buf)->length + sizeof(mailbox_metadata_t) > receiver_tcb->mailbox_capacity - receiver_tcb->mailbox_size) return RTX_ERR;
+
+	U8* recv_box = receiver_tcb->mailbox_lo;
+	U32 *head = &receiver_tcb->mail_head;
 
 	// set metadata
 	mailbox_metadata_t* metadata = (mailbox_metadata_t *)(recv_box + *head);
@@ -53,7 +58,7 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 	}
 
 	U32 msg_len = ((RTX_MSG_HDR *)buf)->length;
-	U32 mb_cap = g_tcbs[receiver_tid].mailbox_capacity;
+	U32 mb_cap = receiver_tcb->mailbox_capacity;
 	*head = (*head + sizeof(mailbox_metadata_t)) % mb_cap;
 
     U8* rec_buf = (U8 *)buf;
@@ -63,12 +68,12 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 		*head = (*head + 1) % mb_cap;
 	}
 
-	g_tcbs[receiver_tid].mailbox_size += sizeof(mailbox_metadata_t) + msg_len;
+	receiver_tcb->mailbox_size += sizeof(mailbox_metadata_t) + msg_len;
 
 	// unblock receiver & switch if needed
-	if(g_tcbs[receiver_tid].state == BLK_MSG){
-		g_tcbs[receiver_tid].state = READY;
-		sched_insert(&g_tcbs[receiver_tid]);
+	if(receiver_tcb->state == BLK_MSG){
+		receiver_tcb->state = READY;
+		sched_insert(receiver_tcb);
 		k_tsk_yield();
 	}
 

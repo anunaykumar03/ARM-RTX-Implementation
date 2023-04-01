@@ -74,6 +74,8 @@ void    k_tsk_switch        (TCB *); /* kernel thread context switch, two stacks
 int     k_tsk_run_new       (void);  /* kernel runs a new thread  */
 int     k_tsk_yield         (void);  /* kernel tsk_yield function */
 
+inline TCB * k_tsk_get_tcb   (task_t tid);
+
 // Not implemented, to be done by students
 int     k_tsk_create        (task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size);
 void    k_tsk_exit          (void);

@@ -69,6 +69,7 @@ TCB             g_tcbs[MAX_TASKS];			// an array of TCBs
 RTX_TASK_INFO   g_null_task_info;			// The null task info
 U32             g_num_active_tasks = 0;		// number of non-dormant tasks
 
+int is_kcd_init = 0;
 
 // stores tasks IDs for assigning TID
 unsigned int U_TID_Q[MAX_TASKS];
@@ -134,6 +135,16 @@ The memory map of the OS image may look like the following:
     
 ---------------------------------------------------------------------------*/ 
 
+inline TCB * k_tsk_get_tcb(task_t tid){
+    if(tid >= MAX_TASKS) return NULL;
+
+    if(tid == TID_KCD && is_kcd_init){
+        return &g_kcd_tcb;
+    }
+
+    return &g_tcbs[tid];
+}
+
 /*
  *===========================================================================
  *                            FUNCTIONS
@@ -152,8 +163,6 @@ TCB *scheduler(void)
 {
 	return sched_peak();
 }
-
-
 
 /**************************************************************************//**
  * @brief       initialize all boot-time tasks in the system,
@@ -209,22 +218,31 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
     U_TID_tail = 0;
 
     // create the rest of the tasks
-    int is_kcd_init = 0;
+    task_t target_tid;
     p_taskinfo = task_info;
     for ( int i = 0; i < num_tasks; i++ ) {
-        TCB *p_tcb = &g_tcbs[U_TID_Q[U_TID_head]];
+        target_tid = U_TID_Q[U_TID_head];
+        //always assign the last task to have tid KCD if it hasnt been taken
+        //This is so it can reenter the queue
         if(i == num_tasks-1 && !is_kcd_init && num_tasks >= TID_KCD){
-            p_tcb = &g_tcbs[TID_KCD];
+            target_tid = TID_KCD;
         }
-        if (k_tsk_create_new(p_taskinfo, p_tcb, U_TID_Q[U_TID_head]) == RTX_OK) {
-        	if(p_taskinfo->ptask != kcd_task){
+
+        TCB *p_tcb = &g_tcbs[target_tid];
+
+        if (p_taskinfo != NULL && p_taskinfo->ptask == kcd_task) {
+            target_tid = TID_KCD;
+            is_kcd_init = 1;
+            p_tcb = &g_kcd_tcb;
+        }
+
+        if (k_tsk_create_new(p_taskinfo, p_tcb, target_tid) == RTX_OK) {
+            //take the head
+        	if(p_taskinfo->ptask != kcd_task){ 
 				U_TID_head = ++U_TID_head % MAX_TASKS;
         	}
 			g_num_active_tasks++;
     		sched_insert(p_tcb);
-            if (p_taskinfo->ptask != NULL && p_taskinfo->ptask == kcd_task){
-                is_kcd_init = 1;
-            }
         }
         p_taskinfo++;
     }
@@ -260,10 +278,6 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     }
 
     p_tcb->tid = tid;
-    //if (p_taskinfo->ptask == kcd_task){
-    //    if (g_tcbs[TID_KCD].state != DORMANT || p_taskinfo->priv != 0) return RTX_ERR;
-    //    p_tcb->tid = TID_KCD;
-    //}
     p_tcb->state = READY;
     p_tcb->prio = p_taskinfo->prio;
     p_tcb->priv = p_taskinfo->priv;
@@ -492,16 +506,20 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
 void k_tsk_exit(void) 
 {
 	// free tid
-    if (gp_current_task->tid != 159){
-        U_TID_Q[U_TID_tail] = gp_current_task->tid;
-        U_TID_tail = (U_TID_tail+1) % MAX_TASKS;
-    }
+    U_TID_Q[U_TID_tail] = gp_current_task->tid;
+    U_TID_tail = (U_TID_tail+1) % MAX_TASKS;
     --g_num_active_tasks;
 
     // dealloc user stack if needed
     if (gp_current_task->priv == 0){
         k_dealloc_p_stack(gp_current_task->tid);
     }
+    // dealloc mailbox if needed
+    if (gp_current_task->mailbox_lo != NULL){
+        k_mem_dealloc_internals(gp_current_task->mailbox_lo, 0);
+        gp_current_task->mailbox_lo = NULL;
+    }
+
     gp_current_task->state = DORMANT;
     sched_remove(gp_current_task->tid);
     k_tsk_run_new();
@@ -516,13 +534,15 @@ int k_tsk_set_prio(task_t task_id, U8 prio)
 {
     if (prio == 255 || prio == 0 || task_id == 0 || task_id >= MAX_TASKS) return RTX_ERR;
 
-    if (gp_current_task->priv == 0 && g_tcbs[task_id].priv == 1) return RTX_ERR;
+    TCB * target_tcb = k_tsk_get_tcb(task_id);
 
-    if (g_tcbs[task_id].state == DORMANT) return RTX_ERR;
+    if (gp_current_task->priv == 0 && target_tcb->priv == 1) return RTX_ERR;
 
-    g_tcbs[task_id].prio = prio;
+    if (target_tcb->state == DORMANT) return RTX_ERR;
+
+    target_tcb->prio = prio;
     sched_remove(task_id);
-    sched_insert(&g_tcbs[task_id]);
+    sched_insert(target_tcb);
     k_tsk_run_new();
 
 
@@ -543,18 +563,20 @@ int k_tsk_get_info(task_t task_id, RTX_TASK_INFO *buffer)
         return RTX_ERR;
     }
 
+    TCB * target_tcb = k_tsk_get_tcb(task_id);
+
     buffer->tid = task_id;
-    buffer->prio = g_tcbs[task_id].prio;
-    buffer->state = g_tcbs[task_id].state;
-    buffer->priv = g_tcbs[task_id].priv;
-    buffer->ptask = g_tcbs[task_id].ptask;
-    buffer->k_stack_size = g_tcbs[task_id].k_stack_size;
-    buffer->u_stack_size = g_tcbs[task_id].u_stack_size;
-    buffer->k_stack_hi = g_tcbs[task_id].k_stack_hi;
-    buffer->u_stack_hi = g_tcbs[task_id].u_stack_hi;
+    buffer->prio = target_tcb->prio;
+    buffer->state = target_tcb->state;
+    buffer->priv = target_tcb->priv;
+    buffer->ptask = target_tcb->ptask;
+    buffer->k_stack_size = target_tcb->k_stack_size;
+    buffer->u_stack_size = target_tcb->u_stack_size;
+    buffer->k_stack_hi = target_tcb->k_stack_hi;
+    buffer->u_stack_hi = target_tcb->u_stack_hi;
 
     // check for invalid task ID
-    if (g_tcbs[task_id].state == DORMANT){
+    if (target_tcb->state == DORMANT){
         return RTX_ERR;
     }
 

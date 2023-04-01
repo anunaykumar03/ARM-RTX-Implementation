@@ -52,7 +52,7 @@ void kcd_task(void)
         else if (msg_header->type == KEY_IN && *sender_tid == TID_UART_IRQ){
             if (*msg_data == 0xA){ // enter key
                 // send command string
-                if (cmd_str[0] != '%' || cmd_str_idx == 0){
+                if (cmd_string_idx == MAX_CMD_LEN || cmd_str[0] != '%' || cmd_str_idx < 2 ){
                     // send "Invalid Command"
                     SER_PutStr(0, " Invalid Command\n\r");
                 }
@@ -91,6 +91,8 @@ void kcd_task(void)
                             // command id not registered or task is dormant (task no longer exists)
                             err_flag = 1;
                         }
+                    } else {
+                        SER_PutStr(0, " Invalid Command\n\r");
                     }
 
                     // send message
@@ -104,9 +106,6 @@ void kcd_task(void)
             }
 
             if (cmd_str_idx == MAX_CMD_LEN) {
-                cmd_str_idx = 0;
-                // send "Invalid Command"
-                SER_PutStr(0, " Invalid Command\n\r");
                 continue;
             }
             cmd_str[cmd_str_idx] = *msg_data;

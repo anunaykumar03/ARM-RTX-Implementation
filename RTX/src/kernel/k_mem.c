@@ -89,6 +89,7 @@ const U32 g_p_stack_size = U_STACK_SIZE;
 
 // task kernel stacks
 U32 g_k_stacks[MAX_TASKS][K_STACK_SIZE >> 2] __attribute__((aligned(8)));
+U32 g_kcd_k_stack[K_STACK_SIZE >> 2] __attribute__((aligned(8)));
 
 //process stack for tasks in SYS mode
 U32 g_p_stacks[MAX_TASKS][U_STACK_SIZE >> 2] __attribute__((aligned(8)));
@@ -108,21 +109,26 @@ int k_mem_dealloc_internals(void *ptr, task_t owner);
 
 U32* k_alloc_k_stack(task_t tid)
 {
+    if(tid >= MAX_TASKS && tid == TID_KCD){
+        return g_kcd_k_stack + (K_STACK_SIZE >> 2);
+    }
+
     return g_k_stacks[tid+1];
 }
 
 U32* k_alloc_p_stack(task_t tid)
 {
-	U32 size = g_tcbs[tid].u_stack_size;
+    TCB * target_tcb = k_tsk_get_tcb(tid);
+	U32 size = target_tcb->u_stack_size;
 	U8 *ptr = k_mem_alloc_internals(size, (task_t) 0); // set owner to kernel
-	g_tcbs[tid].u_stack_lo = ptr;
+	target_tcb->u_stack_lo = ptr;
 	if(ptr == NULL) return NULL;
 	return (U32 *)((U32)(ptr + size)); // return hi addr
 }
 
 int k_dealloc_p_stack(task_t tid)
 {
-	return k_mem_dealloc_internals(g_tcbs[tid].u_stack_lo, 0);
+	return k_mem_dealloc_internals(k_tsk_get_tcb(tid)->u_stack_lo, 0);
 }
 
 

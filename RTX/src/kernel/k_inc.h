@@ -113,6 +113,7 @@ extern TCB *gp_current_task;    // always point to the current RUNNING task
 
 // TCBs are statically allocated inside the OS image
 extern TCB g_tcbs[MAX_TASKS];
+extern TCB g_kcd_tcb;
 extern RTX_TASK_INFO g_null_task_info;
 extern U32 g_num_active_tasks;	// number of non-dormant tasks */
 
