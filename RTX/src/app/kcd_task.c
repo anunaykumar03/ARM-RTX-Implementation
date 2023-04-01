@@ -22,12 +22,12 @@ void kcd_task(void)
 
     U32 recv_buf_len = sizeof(RTX_MSG_HDR) + 1; // KEY_IN and KEY_REG messages should have data len = 1
     static U8 recv_buf[sizeof(RTX_MSG_HDR) + 1];                  // holds current message to be processed
-    task_t* sender_tid;
+    task_t sender_tid;
 
     static U8 send_buf[sizeof(RTX_MSG_HDR) + MAX_CMD_LEN];
 
     while (1){
-        if (recv_msg(sender_tid, recv_buf, recv_buf_len) != RTX_OK) {
+        if (recv_msg(&sender_tid, recv_buf, recv_buf_len) != RTX_OK) {
             continue;
         }
         RTX_MSG_HDR* msg_header = (RTX_MSG_HDR *)recv_buf;
@@ -37,22 +37,22 @@ void kcd_task(void)
             // register command identifier
             U8 cmd_id = *msg_data;
             if (cmd_id >= '0' && cmd_id <= '9'){
-                cmd_reg_map[cmd_id - '0'] = *sender_tid; // map '0'-'9' to 0-9
+                cmd_reg_map[cmd_id - '0'] = sender_tid; // map '0'-'9' to 0-9
                 cmd_reg_bitmap |= (1 << (cmd_id - '0'));
             }
             else if (cmd_id >= 'A' && cmd_id <= 'Z'){
-                cmd_reg_map[cmd_id - 55] = *sender_tid; // map A-Z to 10-35
+                cmd_reg_map[cmd_id - 55] = sender_tid; // map A-Z to 10-35
                 cmd_reg_bitmap |= (1 << (cmd_id - 55));
             }
             else if (cmd_id >= 'a' && cmd_id <= 'z'){
-                cmd_reg_map[cmd_id - 61] = *sender_tid; // map a-z to 36-61
+                cmd_reg_map[cmd_id - 61] = sender_tid; // map a-z to 36-61
                 cmd_reg_bitmap |= (1 << (cmd_id - 61));
             }
         }
-        else if (msg_header->type == KEY_IN && *sender_tid == TID_UART_IRQ){
+        else if (msg_header->type == KEY_IN && sender_tid == TID_UART_IRQ){
             if (*msg_data == 0xA){ // enter key
                 // send command string
-                if (cmd_string_idx == MAX_CMD_LEN || cmd_str[0] != '%' || cmd_str_idx < 2 ){
+                if (cmd_str_idx == MAX_CMD_LEN || cmd_str[0] != '%' || cmd_str_idx < 2 ){
                     // send "Invalid Command"
                     SER_PutStr(0, " Invalid Command\n\r");
                 }
@@ -73,21 +73,21 @@ void kcd_task(void)
                     U8 err_flag = 0;
                     if (cmd_id >= '0' && cmd_id <= '9'){
                         receiver_tid = cmd_reg_map[cmd_id - '0'];
-                        if ((cmd_reg_bitmap >> (cmd_id - '0')) & 0x1 != 1 || g_tcbs[receiver_tid].state == DORMANT){
+                        if (((cmd_reg_bitmap >> (cmd_id - '0')) & 0x1) != 1 || g_tcbs[receiver_tid].state == DORMANT){
                             // command id not registered or task is dormant (task no longer exists)
                             err_flag = 1;
                         }
                     }
                     else if (cmd_id >= 'A' && cmd_id <= 'Z'){
                         receiver_tid = cmd_reg_map[cmd_id - 55];
-                        if ((cmd_reg_bitmap >> (cmd_id - 55)) & 0x1 != 1 || g_tcbs[receiver_tid].state == DORMANT){
+                        if (((cmd_reg_bitmap >> (cmd_id - 55)) & 0x1) != 1 || g_tcbs[receiver_tid].state == DORMANT){
                             // command id not registered or task is dormant (task no longer exists)
                             err_flag = 1;
                         }
                     }
                     else if (cmd_id >= 'a' && cmd_id <= 'z'){
                         receiver_tid = cmd_reg_map[cmd_id - 61];
-                        if ((cmd_reg_bitmap >> (cmd_id - 61)) & 0x1 != 1 || g_tcbs[receiver_tid].state == DORMANT){
+                        if (((cmd_reg_bitmap >> (cmd_id - 61)) & 0x1) != 1 || g_tcbs[receiver_tid].state == DORMANT){
                             // command id not registered or task is dormant (task no longer exists)
                             err_flag = 1;
                         }

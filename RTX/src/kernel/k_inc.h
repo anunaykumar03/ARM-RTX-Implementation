@@ -89,6 +89,11 @@ typedef struct {
 	task_t sender_tid;
 } mailbox_metadata_t;
 
+typedef struct {
+	mailbox_metadata_t 	metadata;
+	RTX_MSG_HDR 		msg_header;
+	U8   				msg_data[1];
+} message_t;
 /*
  *==========================================================================
  *                   GLOBAL VARIABLES DECLARATIONS

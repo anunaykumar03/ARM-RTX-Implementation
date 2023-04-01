@@ -109,7 +109,7 @@ int k_mem_dealloc_internals(void *ptr, task_t owner);
 
 U32* k_alloc_k_stack(task_t tid)
 {
-    if(tid >= MAX_TASKS && tid == TID_KCD){
+    if(is_kcd_init && tid == TID_KCD){
         return g_kcd_k_stack + (K_STACK_SIZE >> 2);
     }
 

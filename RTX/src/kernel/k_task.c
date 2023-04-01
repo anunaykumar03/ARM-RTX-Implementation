@@ -53,6 +53,8 @@
 #include "k_task.h"
 #include "k_rtx.h"
 #include "prio_heap.h"
+#include "k_inc.h"
+#include "printf.h"
 
 #ifdef DEBUG_0
 #include "printf.h"
@@ -66,6 +68,7 @@
 
 TCB             *gp_current_task = NULL;	// the current RUNNING task
 TCB             g_tcbs[MAX_TASKS];			// an array of TCBs
+TCB				g_kcd_tcb;
 RTX_TASK_INFO   g_null_task_info;			// The null task info
 U32             g_num_active_tasks = 0;		// number of non-dormant tasks
 
@@ -136,8 +139,6 @@ The memory map of the OS image may look like the following:
 ---------------------------------------------------------------------------*/ 
 
 inline TCB * k_tsk_get_tcb(task_t tid){
-    if(tid >= MAX_TASKS) return NULL;
-
     if(tid == TID_KCD && is_kcd_init){
         return &g_kcd_tcb;
     }
@@ -224,7 +225,7 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
         target_tid = U_TID_Q[U_TID_head];
         //always assign the last task to have tid KCD if it hasnt been taken
         //This is so it can reenter the queue
-        if(i == num_tasks-1 && !is_kcd_init && num_tasks >= TID_KCD){
+        if(i == num_tasks-1 && !is_kcd_init && MAX_TASKS > TID_KCD){
             target_tid = TID_KCD;
         }
 
@@ -235,14 +236,21 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
             is_kcd_init = 1;
             p_tcb = &g_kcd_tcb;
         }
+        p_tcb->u_stack_size = p_taskinfo->u_stack_size;
 
         if (k_tsk_create_new(p_taskinfo, p_tcb, target_tid) == RTX_OK) {
             //take the head
-        	if(p_taskinfo->ptask != kcd_task){ 
-				U_TID_head = ++U_TID_head % MAX_TASKS;
+        	if(p_taskinfo->ptask != kcd_task){
+        		if (i != num_tasks-1 && !is_kcd_init){
+    				U_TID_head = ++U_TID_head % MAX_TASKS;
+        		}
         	}
 			g_num_active_tasks++;
     		sched_insert(p_tcb);
+        }
+        else
+        {
+        	printf("this failed");
         }
         p_taskinfo++;
     }
@@ -425,7 +433,7 @@ int k_tsk_run_new(void)
     // at this point, gp_current_task != NULL and p_tcb_old != NULL
     if (gp_current_task != p_tcb_old) {
         gp_current_task->state = RUNNING;   // change state of the to-be-switched-in  tcb
-        if (p_tcb_old->state != DORMANT){
+        if (p_tcb_old->state != DORMANT && p_tcb_old->state != BLK_MSG){
             p_tcb_old->state = READY;           // change state of the to-be-switched-out tcb
         }
         k_tsk_switch(p_tcb_old);            // switch stacks
@@ -460,7 +468,7 @@ int k_tsk_yield(void)
 
 int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size)
 {
-    if (task == NULL || task_entry == NULL || g_num_active_tasks == MAX_TASKS || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT || (stack_size & 0x7) != 0)
+    if (task == NULL || task_entry == NULL || task_entry == kcd_task || g_num_active_tasks == MAX_TASKS || stack_size < U_STACK_SIZE || prio == PRIO_NULL || prio == PRIO_RT || (stack_size & 0x7) != 0)
     	return RTX_ERR;
     // invalid state of RTX??????
     
@@ -562,8 +570,11 @@ int k_tsk_get_info(task_t task_id, RTX_TASK_INFO *buffer)
     if (buffer == NULL || task_id > MAX_TASKS-1) {
         return RTX_ERR;
     }
-
     TCB * target_tcb = k_tsk_get_tcb(task_id);
+    // check for invalid task ID
+    if (target_tcb->state == DORMANT){
+        return RTX_ERR;
+    }
 
     buffer->tid = task_id;
     buffer->prio = target_tcb->prio;
@@ -574,11 +585,6 @@ int k_tsk_get_info(task_t task_id, RTX_TASK_INFO *buffer)
     buffer->u_stack_size = target_tcb->u_stack_size;
     buffer->k_stack_hi = target_tcb->k_stack_hi;
     buffer->u_stack_hi = target_tcb->u_stack_hi;
-
-    // check for invalid task ID
-    if (target_tcb->state == DORMANT){
-        return RTX_ERR;
-    }
 
     return RTX_OK;     
 }

@@ -74,7 +74,7 @@ void    k_tsk_switch        (TCB *); /* kernel thread context switch, two stacks
 int     k_tsk_run_new       (void);  /* kernel runs a new thread  */
 int     k_tsk_yield         (void);  /* kernel tsk_yield function */
 
-inline TCB * k_tsk_get_tcb   (task_t tid);
+TCB * k_tsk_get_tcb   (task_t tid);
 
 // Not implemented, to be done by students
 int     k_tsk_create        (task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size);
@@ -85,5 +85,7 @@ task_t  k_tsk_get_tid       (void);
 int     k_tsk_create_rt     (task_t *tid, TASK_RT *task);
 void    k_tsk_done_rt       (void);
 void    k_tsk_suspend       (struct timeval_rt *tv);
+
+extern int is_kcd_init;
 
 #endif // ! K_TASK_H_

@@ -34,6 +34,12 @@ int k_mbx_create(size_t size) {
     return 0;
 }
 
+void copy_bytes(void * target, void * source, U32 num_bytes){
+	for(int i = 0;i < num_bytes;i++){
+		*((U8*)target + i) = *(((U8*)source) + i);
+	}
+}
+
 int k_send_msg(task_t receiver_tid, const void *buf) {
 
 	if (receiver_tid == 0 || receiver_tid >= MAX_TASKS) return RTX_ERR;
@@ -45,15 +51,17 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 
 	if (buf == NULL || ((RTX_MSG_HDR *)buf)->length < MIN_MSG_SIZE || ((RTX_MSG_HDR *)buf)->length + sizeof(mailbox_metadata_t) > receiver_tcb->mailbox_capacity - receiver_tcb->mailbox_size) return RTX_ERR;
 
-	U8* recv_box = receiver_tcb->mailbox_lo;
-	U32 *head = &receiver_tcb->mail_head;
+	U32 *head = &(receiver_tcb->mail_head);
 
 	// set metadata
-	mailbox_metadata_t* metadata = (mailbox_metadata_t *)(recv_box + *head);
-	metadata->sender_tid = gp_current_task->tid;
+	message_t* msg = (message_t *)((U8*)(receiver_tcb->mailbox_lo) + *head);
+	copy_bytes(&(msg->metadata.sender_tid), &(gp_current_task->tid), sizeof(gp_current_task->tid));
+//	msg->metadata.sender_tid = gp_current_task->tid;
 	if (UART_IRQ_flag){
 		// message is from UART
-		metadata->sender_tid = TID_UART_IRQ;
+		task_t temp_tid = TID_UART_IRQ;
+		copy_bytes(&(msg->metadata.sender_tid), &(temp_tid), sizeof(task_t));
+//		msg->metadata.sender_tid = TID_UART_IRQ;
 
 	}
 
@@ -61,10 +69,9 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 	U32 mb_cap = receiver_tcb->mailbox_capacity;
 	*head = (*head + sizeof(mailbox_metadata_t)) % mb_cap;
 
-    U8* rec_buf = (U8 *)buf;
 	// copy message (includes msg header)
 	for (int i = 0; i < msg_len; i++) {
-		recv_box[*head] = rec_buf[i];
+		*((U8*)(receiver_tcb->mailbox_lo) + *head) = *((U8 *)buf + i);
 		*head = (*head + 1) % mb_cap;
 	}
 
@@ -95,12 +102,14 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
     }
     
 	U32 *tail = &(gp_current_task->mail_tail);
-    U8* start = (U8 *)(gp_current_task->mailbox_lo) + *tail;
-    mailbox_metadata_t* metadata = (mailbox_metadata_t *)start;
-    U8* msg_start = start + sizeof(mailbox_metadata_t);
+    message_t* msg = (message_t *)((U8*)(gp_current_task->mailbox_lo) + *tail);
 	U32 mb_cap = gp_current_task->mailbox_capacity;
-    
-    U32 msg_len = ((RTX_MSG_HDR *)msg_start)->length;
+    *tail = (*tail + sizeof(mailbox_metadata_t)) % mb_cap;
+
+//    U32 msg_len = msg->msg_header.length;
+    U32 msg_len;
+	copy_bytes(&msg_len, &(msg->msg_header.length), sizeof(U32));
+
     if (buf == NULL || msg_len > len) { // message does not fit in buf
         // discard top message
 	    gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + msg_len;
@@ -108,15 +117,16 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
         return RTX_ERR;
     }
 
-    U8* fill_buf = buf;
     for (int i = 0; i < msg_len; i++){
-        fill_buf[i] = msg_start[*tail];
+        *((U8 *)buf + i) = *((U8*)(gp_current_task->mailbox_lo) + *tail);
         *tail = (*tail + 1) % mb_cap;
     }
+
 	gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + msg_len;
 
     if (sender_tid != NULL){
-        *sender_tid = metadata->sender_tid;
+//        *sender_tid = msg->metadata.sender_tid;
+    	copy_bytes(sender_tid, &(msg->metadata.sender_tid), sizeof(task_t));
     }
 
     return RTX_OK;
