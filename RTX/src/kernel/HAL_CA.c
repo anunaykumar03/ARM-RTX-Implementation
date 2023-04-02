@@ -247,12 +247,12 @@ void c_IRQ_Handler(void)
 				SER_PutChar(1, c);	        // display back
 
                                 // potentially make these static/global so only declared once
-                RTX_MSG_HDR* send_hdr = (RTX_MSG_HDR *)send_buf;
-                U8* send_body = send_buf + sizeof(RTX_MSG_HDR);
+                                RTX_MSG_HDR* send_hdr = (RTX_MSG_HDR *)send_buf;
+                                U8* send_body = send_buf + sizeof(RTX_MSG_HDR);
 				send_hdr->length = sizeof(RTX_MSG_HDR) + 1;
-                send_hdr->type = KEY_IN;
+                                send_hdr->type = KEY_IN;
 
-                *send_body = c;
+                                *send_body = c;
 				// how can we tell if msg is sent from here? we cant get the tid from gp_current_task...
 				// what if send fails? discard message
 				UART_IRQ_flag = 1;

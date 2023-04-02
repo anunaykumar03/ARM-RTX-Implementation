@@ -86,7 +86,7 @@ typedef struct tcb {
 } TCB;
 
 typedef struct {
-	task_t sender_tid;
+	U64 sender_tid;
 } mailbox_metadata_t;
 
 typedef struct {
@@ -106,6 +106,7 @@ extern const U32 g_p_stack_size;    // process stack size for sys mode tasks
 
 // task kernel stacks are statically allocated inside the OS image
 extern U32 g_k_stacks[MAX_TASKS][K_STACK_SIZE >> 2] __attribute__((aligned(8)));
+extern U32 g_kcd_k_stack[K_STACK_SIZE >> 2] __attribute__((aligned(8)));
 
 // process stack for tasks in SYS mode, statically allocated inside the OS image  */
 extern U32 g_p_stacks[MAX_TASKS][U_STACK_SIZE >> 2] __attribute__((aligned(8)));
