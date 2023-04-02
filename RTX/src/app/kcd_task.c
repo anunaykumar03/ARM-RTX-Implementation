@@ -14,17 +14,20 @@ void kcd_task(void)
         tsk_exit();
     }
 
-    static task_t cmd_reg_map[62];              // 10 numbers + 26 capital letters + 26 lowercase letters
-    U64 cmd_reg_bitmap = 0;                     // bit is 1 if corresponding cmd id has been registered
+    static task_t cmd_reg_map[62] __attribute__((aligned(4)));       		      // 10 numbers + 26 capital letters + 26 lowercase letters
+    U64 cmd_reg_bitmap = 0;                  							 		  // bit is 1 if corresponding cmd id has been registered
 
-    static U8 cmd_str[MAX_CMD_LEN];             // concatenate command string
+    static U8 cmd_str[MAX_CMD_LEN] __attribute__((aligned(4)));        		   	  // concatenate command string
     U32 cmd_str_idx = 0;
 
-    U32 recv_buf_len = sizeof(RTX_MSG_HDR) + 1; // KEY_IN and KEY_REG messages should have data len = 1
-    static U8 recv_buf[sizeof(RTX_MSG_HDR) + 1];                  // holds current message to be processed
+    U32 recv_buf_len = sizeof(RTX_MSG_HDR) + 1; 								// KEY_IN and KEY_REG messages should have data len = 1
+    static U8 recv_buf[sizeof(RTX_MSG_HDR) + 1] __attribute__((aligned(4)));       // holds current message to be processed
     task_t sender_tid;
 
-    static U8 send_buf[sizeof(RTX_MSG_HDR) + MAX_CMD_LEN];
+    static U8 kcd_send_buf[sizeof(RTX_MSG_HDR) + MAX_CMD_LEN] __attribute__((aligned(4)));
+    RTX_MSG_HDR* send_hdr;
+
+    U8 cmd_too_long_err_flag = 0;
 
     while (1){
         if (recv_msg(&sender_tid, recv_buf, recv_buf_len) != RTX_OK) {
@@ -38,31 +41,32 @@ void kcd_task(void)
             U8 cmd_id = *msg_data;
             if (cmd_id >= '0' && cmd_id <= '9'){
                 cmd_reg_map[cmd_id - '0'] = sender_tid; // map '0'-'9' to 0-9
-                cmd_reg_bitmap |= (1 << (cmd_id - '0'));
+                cmd_reg_bitmap |= (((U64)1) << (cmd_id - '0'));
             }
             else if (cmd_id >= 'A' && cmd_id <= 'Z'){
                 cmd_reg_map[cmd_id - 55] = sender_tid; // map A-Z to 10-35
-                cmd_reg_bitmap |= (1 << (cmd_id - 55));
+                cmd_reg_bitmap |= (((U64)1) << (cmd_id - 55));
             }
             else if (cmd_id >= 'a' && cmd_id <= 'z'){
                 cmd_reg_map[cmd_id - 61] = sender_tid; // map a-z to 36-61
-                cmd_reg_bitmap |= (1 << (cmd_id - 61));
+                cmd_reg_bitmap |= (((U64)1) << (cmd_id - 61));
             }
         }
         else if (msg_header->type == KEY_IN && sender_tid == TID_UART_IRQ){
-            if (*msg_data == 0xA){ // enter key
+            if (*msg_data == 0xD || *msg_data == 0xA){ // enter key
                 // send command string
-                if (cmd_str_idx == MAX_CMD_LEN || cmd_str[0] != '%' || cmd_str_idx < 2 ){
+                if (cmd_too_long_err_flag == 1 || cmd_str[0] != '%' || cmd_str_idx < 2 ){
                     // send "Invalid Command"
+                	cmd_too_long_err_flag = 0;
                     SER_PutStr(0, " Invalid Command\n\r");
                 }
                 else {
                     // compose message
-                    RTX_MSG_HDR* send_hdr = (RTX_MSG_HDR *)send_buf;
+                    send_hdr = (RTX_MSG_HDR *)kcd_send_buf;
                     send_hdr->length = cmd_str_idx-1 + sizeof(RTX_MSG_HDR); // -1 since '%' is not sent
                     send_hdr->type = KCD_CMD;
 
-                    U8* send_body = send_buf + sizeof(RTX_MSG_HDR);
+                    U8* send_body = kcd_send_buf + sizeof(RTX_MSG_HDR);
                     for (int i = 1; i < cmd_str_idx; i++){
                         send_body[i-1] = cmd_str[i];
                     }
@@ -96,7 +100,7 @@ void kcd_task(void)
                     }
 
                     // send message
-                    if (err_flag == 1 || send_msg(receiver_tid, send_buf) != RTX_OK){
+                    if (err_flag == 1 || send_msg(receiver_tid, kcd_send_buf) != RTX_OK){
                         // send "Command cannot be processed"
                         SER_PutStr(0, "Command cannot be processed\n\r");
                     }
@@ -106,6 +110,7 @@ void kcd_task(void)
             }
 
             if (cmd_str_idx == MAX_CMD_LEN) {
+            	cmd_too_long_err_flag =1;
                 continue;
             }
             cmd_str[cmd_str_idx] = *msg_data;

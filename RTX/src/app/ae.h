@@ -50,7 +50,7 @@ extern task_t ktid2;
 extern task_t ktid3;
 
 
-#define TEST 3
+#define TEST 0
 
 #if TEST == 0
 	#define BOOT_TASKS 3

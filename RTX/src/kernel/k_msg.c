@@ -22,6 +22,9 @@ int k_mbx_create(size_t size) {
 	void* ptr = k_mem_alloc_internals(size, (task_t) 0);
 	if (ptr == NULL) return RTX_ERR;
 
+	if ((size & 0x3) != 0) {
+		size = (size + 4) & ~0x3;
+	}
 	gp_current_task->mailbox_lo = ptr;
 	gp_current_task->mailbox_capacity = size;
 	gp_current_task->mailbox_size = 0;
@@ -66,7 +69,7 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 	// copy message (includes msg header)
 	// ensure pad to a multiple of 4 bytes
 	U32 rounded_len = msg_len;
-	if (msg_len & 0x3 != 0) {
+	if ((msg_len & 0x3) != 0) {
 		rounded_len = (msg_len + 4) & ~0x3;
 	}
 	for (int i = 0; i < rounded_len; i++) {
@@ -82,7 +85,9 @@ int k_send_msg(task_t receiver_tid, const void *buf) {
 	if(receiver_tcb->state == BLK_MSG){
 		receiver_tcb->state = READY;
 		sched_insert(receiver_tcb);
-		k_tsk_yield();
+		if (!UART_IRQ_flag){
+			k_tsk_yield();
+		}
 	}
 
 	return RTX_OK;
@@ -99,7 +104,6 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
         gp_current_task->state = BLK_MSG;
         sched_remove(gp_current_task->tid);
         k_tsk_run_new();
-        return RTX_OK;
     }
     
 	// read from receiver mailbox
@@ -113,14 +117,14 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
     U32 msg_len = ((RTX_MSG_HDR *)(receiver_mailbox + *tail))->length;
 
 	U32 rounded_len = msg_len;
-	if (msg_len & 0x3 != 0) {
+	if ((msg_len & 0x3) != 0) {
 		rounded_len = (msg_len + 4) & ~0x3;
 	}
 
     if (buf == NULL || msg_len > len) { // message does not fit in buf
         // discard top message
 	    gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + rounded_len;
-        *tail = (*tail + sizeof(mailbox_metadata_t) + rounded_len) % mb_cap;
+        *tail = (*tail + rounded_len) % mb_cap;
         return RTX_ERR;
     }
 
@@ -130,7 +134,7 @@ int k_recv_msg(task_t *sender_tid, void *buf, size_t len) {
 		}
         *tail = (*tail + 1) % mb_cap;
     }
-	gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + msg_len;
+	gp_current_task->mailbox_size -= sizeof(mailbox_metadata_t) + rounded_len;
 
     if (sender_tid != NULL){
         *sender_tid = metadata.sender_tid;

@@ -216,7 +216,7 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
         j++;
     }
     U_TID_head = 1;
-    U_TID_tail = 0;
+    U_TID_tail = j % MAX_TASKS;
 
     // create the rest of the tasks
     task_t target_tid;
@@ -236,12 +236,11 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
             is_kcd_init = 1;
             p_tcb = &g_kcd_tcb;
         }
-        p_tcb->u_stack_size = p_taskinfo->u_stack_size;
 
         if (k_tsk_create_new(p_taskinfo, p_tcb, target_tid) == RTX_OK) {
             //take the head
         	if(p_taskinfo->ptask != kcd_task){
-        		if (i != num_tasks-1 && !is_kcd_init){
+        		if (target_tid != TID_KCD){ // since this tid is not in the queue
     				U_TID_head = ++U_TID_head % MAX_TASKS;
         		}
         	}
@@ -250,7 +249,7 @@ int k_tsk_init(RTX_TASK_INFO *task_info, int num_tasks)
         }
         else
         {
-        	printf("this failed");
+        	printf("A task creation on init failed\n");
         }
         p_taskinfo++;
     }
@@ -290,10 +289,13 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
     p_tcb->prio = p_taskinfo->prio;
     p_tcb->priv = p_taskinfo->priv;
     p_tcb->ptask = p_taskinfo->ptask;
-    U32 temp_size = p_tcb->u_stack_size;
-    p_tcb->u_stack_size = 0;
+    p_tcb->u_stack_size = p_taskinfo->u_stack_size;
     p_tcb->mailbox_lo = NULL;
     
+    if (p_taskinfo->priv == 0 && p_taskinfo->u_stack_size < U_STACK_SIZE && (p_taskinfo->u_stack_size & 0x7) != 0){
+    	return RTX_ERR;
+    }
+
 
     /*---------------------------------------------------------------
      *  Step1: allocate kernel stack for the task
@@ -334,7 +336,6 @@ int k_tsk_create_new(RTX_TASK_INFO *p_taskinfo, TCB *p_tcb, task_t tid)
         //********************************************************************//
         //*** allocate user stack from the user space, not implemented yet ***//
         //********************************************************************//
-        p_tcb->u_stack_size = temp_size;
 		void *p_stack = k_alloc_p_stack(tid);
 		if (p_stack == NULL) return RTX_ERR;
         *(--sp) = (U32) p_stack;
@@ -488,7 +489,6 @@ int k_tsk_create(task_t *task, void (*task_entry)(void), U8 prio, U16 stack_size
     task_info.priv = 0;
     
     // set up new task
-    g_tcbs[tid].u_stack_size = stack_size;
     if (k_tsk_create_new(&task_info, &g_tcbs[tid], tid) == RTX_ERR){
 	    U_TID_Q[U_TID_tail] = tid;
 	    U_TID_tail = (U_TID_tail+1) % (MAX_TASKS);
@@ -549,10 +549,11 @@ int k_tsk_set_prio(task_t task_id, U8 prio)
     if (target_tcb->state == DORMANT) return RTX_ERR;
 
     target_tcb->prio = prio;
-    sched_remove(task_id);
-    sched_insert(target_tcb);
-    k_tsk_run_new();
-
+    if (target_tcb->state != BLK_MSG){
+        sched_remove(task_id);
+        sched_insert(target_tcb);
+        k_tsk_run_new();
+    }
 
 #ifdef DEBUG_0
     printf("k_tsk_set_prio: entering...\n\r");

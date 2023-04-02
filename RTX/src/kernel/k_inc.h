@@ -86,7 +86,7 @@ typedef struct tcb {
 } TCB;
 
 typedef struct {
-	U64 sender_tid;
+	U32 sender_tid;
 } mailbox_metadata_t;
 
 typedef struct {

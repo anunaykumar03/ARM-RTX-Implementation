@@ -120,6 +120,9 @@ U32* k_alloc_p_stack(task_t tid)
 {
     TCB * target_tcb = k_tsk_get_tcb(tid);
 	U32 size = target_tcb->u_stack_size;
+	if ((size & 0x7) != 0){
+		size = (size + 8) & ~0x7;
+	}
 	U8 *ptr = k_mem_alloc_internals(size, (task_t) 0); // set owner to kernel
 	target_tcb->u_stack_lo = ptr;
 	if(ptr == NULL) return NULL;

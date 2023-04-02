@@ -92,7 +92,11 @@ void ae_set_task_info(RTX_TASK_INFO *tasks, int num_tasks) {
 	tasks[2].priv  = 0;
 	tasks[2].prio  = 100;
 	tasks[2].k_stack_size = (0x200);
-#endif
+
+	// the following line was not originally here (added to ensure task can be created and branching succeeds)
+	tasks[2].u_stack_size = (0x200);
+
+	#endif
 
 
 #if TEST == 1
